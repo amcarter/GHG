@@ -1,7 +1,7 @@
 # Master file for NHC ghg analyses
 # A Carter
 # 2020-02-14
-setwd('C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/')
+setwd('C:/Users/Alice Carter/git/ghg_patterns_nhc/')
 
 # Compile ghg dataframe and all drivers
   # this script also fills in missing driver points using other data

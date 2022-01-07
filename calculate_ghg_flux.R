@@ -3,7 +3,7 @@
 # A Carter
 # 2020 12 10
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 library(tidyverse)
 library(ggplot2)

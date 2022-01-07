@@ -9,7 +9,7 @@ library(ggplot2)
 #install.packages("whitebox", repos="http://R-Forge.R-project.org")
 library(whitebox)
 
-setwd('C://Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/src/Amanda_code/')
+setwd('C://Users/Alice Carter/git/ghg_patterns_nhc/src/Amanda_code/')
 #nhc<-raster('durham.asc')
 #nhc_tif<-writeRaster(nhc, 'nhc_tif.tif', format='GTiff')
 nhc<-raster('fivecounties.tif')

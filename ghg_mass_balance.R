@@ -5,7 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(ggpubr)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv") %>%
   mutate(distance_m = 8450 - distance_upstream_m,

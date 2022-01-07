@@ -11,7 +11,7 @@ library(viridis)
 library(streamMetabolizer)
 library(ggpubr)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 airpres <- read_csv("data/siteData/interpolatedQ_allsites.csv") %>%
   select(DateTime_UTC, AirPres_kPa, NHC.Q)

@@ -8,7 +8,7 @@ library(viridis)
 library(streamMetabolizer)
 library(ggpubr)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 ghg <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 ghg_nhc <- ghg %>% 
   mutate(del_CO2 = (CO2.ugL - CO2.sat) / 44, 

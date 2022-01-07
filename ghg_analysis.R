@@ -9,7 +9,7 @@ library(MuMIn)
 library(lme4)
 library(lmerTest)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 # d2 <- read_csv("data/ghg_flux_complete_drivers_dataframe_noNAs.csv")

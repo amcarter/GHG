@@ -2,7 +2,7 @@ library(tidyverse)
 library(lubridate)
 library(mice)
 
-setwd('C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/')
+setwd('C:/Users/Alice Carter/git/ghg_patterns_nhc/')
 # source('src/helpers.R')
 
 d = read_csv('data/processed_sensor/compiled_nhc_dat.csv')

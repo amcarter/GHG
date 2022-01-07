@@ -5,7 +5,7 @@ library(tidyverse)
 library(lubridate)
 library(zoo)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 # load ghg data
 ghg <- read_csv("data/gas/NHC_2019-2020_processed_GHGdata.csv") %>%

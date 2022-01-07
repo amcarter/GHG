@@ -2,7 +2,7 @@
 library(tidyverse)
 library(lubridate)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")%>%
   filter(!is.na(datetime),
