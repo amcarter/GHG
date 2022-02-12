@@ -21,48 +21,50 @@ ysi <- read_csv("data/water_chemistry/all_nhc_ysi_data.csv") %>%
   mutate(date = as.Date(date, format = "%m/%d/%Y"),
          DO_pctsat = ifelse(DO_pctsat <= 2, DO_pctsat, DO_pctsat/100),
          DO.sat.ysi = DO_mgL/DO_pctsat) %>%
-  select(site, date, spc_uScm.ysi = spc_uscm, DO.obs.ysi = DO_mgL, 
+  dplyr::select(site, date, spc_uScm.ysi = spc_uscm, DO.obs.ysi = DO_mgL, 
          DO.sat.ysi) 
 
 # These dates are grouped so that they are all on the same days longitudinally
 ghg <- ghg %>%
   mutate(datetime = round_date(ymd_hms(paste(date, time), tz = 'EST'), 
          unit = "15 minute")) %>%
-  select(-Notes, -date, -time) %>%
+  dplyr::select(-Notes, -date, -time) %>%
   group_by(site, datetime) %>%
   summarize(across(everything(), mean, na.rm = T)) %>%
   ungroup() %>%
   mutate(date = as.Date(datetime, tz = "EST")) %>%
+  left_join(ysi, by = c('site', 'date')) %>%
   mutate(group = case_when(date == as.Date("2019-12-04") ~ "2019-12-03",
                            date == as.Date("2020-01-30") ~ "2020-01-29",
-                           TRUE ~ as.character(date))) %>%
-  left_join(ysi, by = c('site', 'date'))
+                           TRUE ~ as.character(date)))
 
 # site data
-site_dat <- read_csv("../NHC_2019_metabolism/data/siteData/NHCsite_metadata.csv") %>%
+site_dat <- read_csv("data/site_data/NHCsite_metadata.csv") %>%
   slice(c(1:5,7:8)) %>%
   select(site = sitecode, latitude, longitude, CRS, 
          distance_upstream_m = distance_m,
          width_march_m = width_mar_m,
          ws_area_km2 = ws_area.km2,
-         slope_nhd = slope, habitat)
+         slope_wbx, habitat)
   
 # instantaneous data
-air <- read_csv("../NHC_2019_metabolism/data/siteData/interpolatedQ_allsites.csv") %>%
+air <- read_csv("data/site_data/NOAA_airpres.csv") %>%
   mutate(datetime = with_tz(DateTime_UTC, tz = 'EST')) %>%
-  select(datetime, AirPres_kPa, AirTemp_C) 
+  select(datetime, AirPres_kPa = air_kPa, AirTemp_C = air_temp) 
 
 sites <- site_dat[1:6, 1, drop = T]
-raw <- data.frame()
-for(site in sites){
-  dat <- read_csv(paste0("../hall_50yl2/NHC_2019_metabolism/data/metabolism/processed/", site, ".csv"), 
-                  guess_max = 10000)
-  dat$site <- site
-  raw = bind_rows(raw, dat)
-}
+# raw <- data.frame()
+# for(site in sites){
+#   dat <- read_csv(paste0("../nhc_50yl/data/metabolism/processed/", site, ".csv"), 
+#                   guess_max = 10000)
+#   dat$site <- site
+#   raw = bind_rows(raw, dat)
+# }
+# 
+# write_csv(raw, 'data/site_data/metabolism.csv')
+raw <- read_csv('data/site_data/metabolism.csv')
 
 raw_dat <- raw %>%
-  as_tibble() %>%
   mutate(spc_uScm = ifelse(!is.na(SpecCond_uScm),
                            SpecCond_uScm, SpecCond_mScm*1000),
          datetime = with_tz(DateTime_UTC, tz = "EST"),
@@ -72,8 +74,9 @@ raw_dat <- raw %>%
   select(datetime, site, level_m, depth, site, spc_uScm, DO.obs, DO.sat,
          watertemp_C = temp.water, discharge) %>%
   group_by(site) %>%
-  # mutate(across(-datetime, ~na.approx(., na.rm = F, x = datetime))) %>%
+  mutate(across(-datetime, ~na.approx(., na.rm = F, x = datetime))) %>%
   ungroup()
+
 dat_inst <- ghg %>% 
   left_join(raw_dat, by = c("datetime", "site")) %>%
   left_join(air, by = "datetime") %>%
@@ -126,6 +129,7 @@ dat_inst <- dat_inst %>%
   filter(site == 'MC751') %>%
   left_join(site_dat, by = 'site') %>%
   bind_rows(dd)
+
 # daily data
 raw_daily <- raw_dat %>%
   mutate(date = as.Date(datetime, tz = "EST")) %>%
@@ -153,9 +157,10 @@ for(ss in c('CBP', 'UNHC', 'PM')){
 }
 qq <- select(qq, -NHCQ)
                         
-K600 <- readRDS("../hall_50yl2/NHC_2019_metabolism/data/metabolism/compiled/met_preds_stream_metabolizer.rds")$preds %>%
+K600 <- readRDS("data/site_data/met_preds_stream_metabolizer.rds")$preds %>%
   filter(era == 'now') %>%
-  select(site, date, discharge,starts_with('K600'))
+  select(site, date, discharge,starts_with('K600')) %>% 
+  distinct()
 qq <- bind_rows(K600, qq) %>%
   group_by(site, date) %>%
   summarize_all(mean, na.rm = T) %>%
@@ -164,15 +169,15 @@ qq <- bind_rows(K600, qq) %>%
   mutate(across(starts_with('K'), ~ na.approx(., na.rm = F, x = discharge))) %>%
   ungroup()
   
-met <- readRDS("../hall_50yl2/NHC_2019_metabolism/data/metabolism/compiled/met_preds_stream_metabolizer.rds")$filled %>%
-  filter(year > 2000) %>%
+met <- readRDS("data/site_data/met_preds_stream_metabolizer.rds")$filled %>%
+  filter(year > 2000) %>% distinct() %>%
   select(site, date, starts_with(c("GPP", "ER"), ignore.case = FALSE)) %>%
   select(-ends_with('cum')) %>%
   # convert to units of O2 from C
   mutate(across(starts_with(c('GPP', 'ER')), ~. * 32/12)) %>%
   left_join(K600[,-3], by = c('site', 'date')) %>%
-  group_by(site) %>%
-  mutate(across(-date, ~na.approx(., na.rm = F, x =  date))) %>%
+  group_by(site) %>% 
+  mutate(across(-date, ~zoo::na.approx(., na.rm = F, x =  date))) %>% 
   ungroup()
 
 nuts <- read_csv("data/water_chemistry/water_chemistry_2019-2020_compiled.csv") %>%
@@ -187,12 +192,18 @@ SP_wchem <- read_csv('data/water_chemistry/StreampulseWQDec2020.csv') %>%
            tdn_mgl = 'TDN (mg/L)', nh4n_mgl = 'NH4-N (mg/L)', 
            po4p_mgl = 'PO4-P (mg/L)') %>%
     mutate(date = as.Date(date, format = '%m/%d/%Y'),           
-           no3n_mgl = ifelse(no3n_mgl == "<0.001", 0.0005, 
-                             as.numeric(no3n_mgl))) %>%
+           no3n_mgl = case_when(no3n_mgl == "<0.001" ~ "0.0005", 
+                                TRUE ~ no3n_mgl),
+           no3n_mgl = as.numeric(no3n_mgl)) %>%
     bind_rows(nuts) %>%
-    mutate(br_mgl = ifelse(br_mgl == "<0.03", 0.015, as.numeric(br_mgl)),
-           nh4n_mgl = ifelse(nh4n_mgl == "<0.01", 0.005, as.numeric(nh4n_mgl)),
-           po4p_mgl = ifelse(po4p_mgl == "<0.01", 0.005, as.numeric(po4p_mgl)),
+    mutate(br_mgl = case_when(br_mgl == "<0.03" ~ "0.015", 
+                              br_mgl == "<0.01" ~ "0.005",
+                              TRUE ~ br_mgl),
+           nh4n_mgl = ifelse(nh4n_mgl == "<0.01", "0.005", nh4n_mgl),
+           po4p_mgl = ifelse(po4p_mgl == "<0.01", "0.005",po4p_mgl),
+           br_mgl = as.numeric(br_mgl),
+           nh4n_mgl = as.numeric(nh4n_mgl),
+           po4p_mgl = as.numeric(po4p_mgl),
            date = case_when(site == 'NHC' & date == as.Date('2020-01-29') ~
                               as.Date('2020-01-30'),
                             date == as.Date('2020-03-10') ~ 
@@ -203,6 +214,7 @@ dat_ghg <- dat_inst %>%
   left_join(met, by = c("date", "site")) %>%
   left_join(raw_daily, by = c('site', 'date')) %>%
   arrange(date, distance_upstream_m)
+
 colnames(qq) <- c('site', 'date', paste0(colnames(qq)[3:6], '.2'))
 
 dat_ghg <- dat_ghg %>%
@@ -227,6 +239,7 @@ dat_ghg_predictors <- SP_wchem %>%
   left_join(site_dat, by = 'site') %>%
   filter(date <= date_rng[2], date >= date_rng[1]) %>%
   arrange(date, distance_upstream_m)
+
 # filter(dat_ghg, site != 'MC751') %>%
 # ggplot(aes(date, ER, col = site)) +
 #   geom_point() +

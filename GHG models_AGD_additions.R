@@ -11,7 +11,7 @@ library(nlme)
 library(lmerTest)
 library(car)
 
-setwd("C:/Users/Alice Carter/Dropbox (Duke Bio_Ea)/projects/ghg_patterns_nhc/")
+setwd("C:/Users/Alice Carter/git/ghg_patterns_nhc/")
 # setwd('C://Users/adelv/Dropbox/Duke/NHC/Alice')
 
 
@@ -33,7 +33,8 @@ dat <- dat %>%
   left_join(slope[,c(1:2)]) %>%
   rename(slope_deg = slope_wbx) 
 
-ggplot(slope, aes(slope_nhd, slope, col = site)) + geom_point() +geom_abline(slope = 1, intercept = 0)
+ggplot(slope, aes(slope_nhd, slope, col = site)) + geom_point() +
+  geom_abline(slope = 1, intercept = 0)
   
 png('figures/gas_evasion_coef_by_site.png', width = 6, height = 3, res = 300,
     units = 'in', family = 'cairo')
@@ -140,6 +141,7 @@ PRESS <- function(linear.model) {
   
   return(PRESS)
 }
+
 pred_r_squared <- function(linear.model) {
   #' Use anova() to get the sum of squares for the linear model
   lm.anova <- anova(linear.model)
@@ -158,6 +160,7 @@ pred_r_squared <- function(linear.model) {
 names(scaled)
 #random intercepts model
 lme0site <- lme(CH4.ugL~1, random=~1|site, data=scaled)
+lme0site <- lme4::lmer(CH4.ugL~1 + (1|site), data=scaled)
 summary(lme0site)
 VarCorr(lme0site)
 tau.sq<-as.numeric(VarCorr(lme0site)[1,1])
