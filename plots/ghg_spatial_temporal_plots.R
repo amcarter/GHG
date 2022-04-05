@@ -15,7 +15,7 @@ dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")%>%
 dvs <- read_csv("data/ghg_filled_drivers_dataframe.csv")
 
 ggplot(dat, aes(site, K_CO2, col = factor(site))) +
-  geom_line()
+  geom_boxplot()
 d2 <- read_csv("data/ghg_flux_complete_drivers_dataframe_noNAs.csv")
 # plots ####
 dat$site <- factor(dat$site, levels = c("NHC", "PM", "CBP", "WB", "WBP","UNHC"))

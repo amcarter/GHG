@@ -31,17 +31,23 @@ scaled <- dat %>%
          !is.na(GPP)) %>%
   mutate(logQ = log(discharge),
          NER = ER - GPP,
-         DO.persat = DO.obs/DO.sat, 
-         no3n_mgl = ifelse(no3n_mgl > 0.6, NA, no3n_mgl)) %>%# remove high NO3, it is too high leverage
-  dplyr::select(site, habitat, logQ, watertemp_C, ER, GPP, NER, 
+         DO.persat = DO.obs/DO.sat,
+         log_no3 = case_when(no3n_mgl== 0 ~ log(0.0015),
+                                   TRUE ~ log(no3n_mgl))) %>% 
+         # no3n_mgl = ifelse(no3n_mgl > 0.6, NA, no3n_mgl)) %>%# remove high NO3, it is too high leverage
+  dplyr::select(site, habitat, logQ, watertemp_C, ER, GPP, NER, K600,
          DO.obs, DO.persat, slope_wbx,
-         no3n_mgl, nh4n_mgl, doc_mgl, ends_with("ugld"), ends_with("ugL")) %>%
+         log_no3, nh4n_mgl, doc_mgl, ends_with("ugld"), ends_with("ugL")) %>%
   mutate(across(-c(site, habitat), ~ scale(.)[,1, drop = T]), 
          across(c(site, habitat), ~ factor(.)))
 
+par(mfrow = c(3,4))
+for(i in 3:21){
+  
+  plot(density(scaled[,i, drop = T], na.rm = T))}
 preds <- scaled %>%
-  dplyr::select(logQ, watertemp_C, GPP, ER, slope_wbx, DO.obs, 
-         no3n_mgl, CO2.ugL, doc_mgl) 
+  dplyr::select(logQ, watertemp_C, GPP, ER, K600, slope_wbx, DO.obs, 
+         log_no3, CO2.ugL, doc_mgl) 
 
 cov(preds)
 # There is a lot of covariance between:
@@ -50,11 +56,76 @@ cov(preds)
 # DOC and logQ. I wll exclude DOC
 
 # run an exhaustive set of LMEs using the Leaps Package
+get_mod_results <- function(mm, gas, flux = F){
+  m <- stepAIC(mm, direction = 'both', trace = F)
+  print("Variance inflation factors - should be less than ~5")
+  print(vif(m))
+  r <- data.frame(r.squaredGLMM(m)) %>%
+    mutate(gas = gas, flux = flux,
+           formula = as.character(summary(m)$call)[2])
+  cf <- summary(m)$coefficients %>%
+    as_tibble() %>%
+    mutate(predictor = rownames(summary(m)$coefficients))
+  colnames(cf) <- c('estimate', 'std_error', 't_val', 
+                    'pr_greaterthan_t', 'predictor')
+  ci <- data.frame(confint(m)) %>%
+    mutate(predictor = rownames(confint(m))) %>%
+    left_join(cf, by = 'predictor') %>%
+    mutate(effect = "fixed",
+           gas = gas,
+           flux = flux) 
+  
+  steps <- m$anova %>%
+    as_tibble() %>%
+    rename(Resid_Df = 'Resid. Df', resid_dev = 'Resid. Dev') %>%
+    mutate(effect = "fixed",
+           gas = gas,
+           flux = flux) 
+  
+  
+  return(list(r2 = r,
+              steps = steps,
+              mod = ci))
+}
 
+rsqs <- data.frame()
+mod_fits <- data.frame()
+mod_steps <- data.frame()
+
+# CO2####
 # test if site should be included as a random effectCO2
-mm <- lme4::lmer(CO2.ugL ~ slope_wbx + (1|site), data = scaled)
-summary(mm)  # 0 % additional variance explained
+nulm <- lm(CO2.flux_ugld ~ slope_wbx, data = scaled)
+nm <- lm(CO2.flux_ugld ~ slope_wbx + K600, data = scaled)
+nmb <- lm(CO2.flux_ugld ~ K600, data = scaled)
+summary(nmb) 
+AICc(mix)
+mix <- lme4::lmer(CO2.flux_ugld ~ (1|site), data = scaled)
+summary(mix)  # 0 % additional variance explained
 
+# likelihood ratio test: I'm just not sure how to interpret the output
+# my_stat = 2*(logLik(mix) - logLik(nulm,REML = TRUE))
+# LRT_stat = numeric(1000)
+# for(i in 1:1000){
+#   y = simulate(nulm)$sim_1
+#   null_md = lm(y ~ slope_wbx, data = scaled)
+#   mixed_md = lmer(y ~ slope_wbx + (1|site), data = scaled)
+#   LRT_stat[i] = as.numeric(2*(logLik(mixed_md) - logLik(null_md,REML = TRUE)))
+# }
+# sum(LRT_stat > my_stat)/1000
+
+mm <- lm(CO2.ugL ~ slope_wbx, data = scaled)
+out <- get_mod_results(mm, gas = "CO2")
+rsqs <- bind_rows(rsqs, out$r2)
+mod_steps <- bind_rows(mod_steps, out$steps)
+mod_fits <- bind_rows(mod_fits, out$mod)
+Q + watertemp_C + slope_nhd + GPP + ER + DO.obs +
+           doc_mgl, data = scaled)
+mm <- lm(CO2.flux_ugld ~ logQ + watertemp_C + slope_nhd + GPP + ER + 
+           DO.obs + doc_mgl, data = scaled)
+out <- get_mod_results(mm, gas = 'CO2', flux = TRUE)
+rsqs <- bind_rows(rsqs, out$r2)
+mod_steps <- bind_rows(mod_steps, out$steps)
+mod_fits <- bind_rows(mod_fits, out$mod)
 mm <- lme4::lmer(CO2.flux_ugld ~ slope_wbx + (1|site), data = scaled)
 summary(mm)
 0.05/(0.05 + 0.985) # 4.8% additional variance explained
@@ -76,55 +147,7 @@ summary(mm)
 # it doesn't seem worth it to include site as a random effect in my models.
 # Use leaps package to test all compination of plain lms
 
-#co2 
-x <- dplyr::select(preds, -CO2.ugL, -no3n_mgl, -ER, -logQ) %>% as.matrix()
-co2 <- regsubsets(x, scaled$CO2.ugL, nbest = 2, method = 'exhaustive')
-csum <- summary(co2)
-csum$bic
-co2_flux <- leaps(co2_preds, scaled$CO2.flux_ugld)
-
-e4::lmer(CO2.ugL ~ slope_wbx + (1|site), data = scaled)
-summary(mm)
-s <- function(mm, gas, flux = F){
-
-    return(list(r2 = r,
-                steps = steps,
-                mod = ci))
-}
-
-rsqs <- data.frame()
-mod_fits <- data.frame()
-mod_steps <- data.frame()
-
-# CO2
-mm <- lm(CO2.ugL ~ logQ + watertemp_C + slope_wbx + GPP + ER + DO.obs +
-           doc_mgl, data = scaled)
-  out <- get_mod_results(mm, gas = "CO2")
-  rsqs <- bind_rows(rsqs, out$r2)
-  mod_steps <- bind_rows(mod_steps, out$steps)
-  mod_fits <- bind_rows(mod_fits, out$mod)
-mm <- lm(CO2.flux_ugld ~ logQ + watertemp_C + slope_wbx + GPP + ER + 
-           DO.obs + doc_mgl, data = scaled)
-  out <- get_mod_results(mm, gas = 'CO2', flux = TRUE)
-  rsqs <- bind_rows(rsqs, out$r2)
-  mod_steps <- bind_rows(mod_steps, out$steps)
-  mod_fits <- bind_rows(mod_fits, out$mod)
-
-# CH4
-mm <- lm(CH4.ugL ~ logQ + watertemp_C + slope_wbx + GPP + ER + DO.obs +
-           doc_mgl + CO2.ugL, data = scaled)
-  out <- get_mod_results(mm, gas = 'CH4')
-  rsqs <- bind_rows(rsqs, out$r2)
-  mod_steps <- bind_rows(mod_steps, out$steps)
-  mod_fits <- bind_rows(mod_fits, out$mod)
   
-mm <- lm(CH4.flux_ugld ~ logQ + watertemp_C + slope_wbx + GPP + ER + DO.obs +
-           doc_mgl + CO2.ugL, data = scaled)
-  out <- get_mod_results(mm, gas = 'CH4', flux = TRUE)
-  rsqs <- bind_rows(rsqs, out$r2)
-  mod_steps <- bind_rows(mod_steps, out$steps) 
-  mod_fits <- bind_rows(mod_fits, out$mod)
-    
 # N2O
 mm <- lm(N2O.ugL ~ logQ + watertemp_C + slope_wbx + GPP + ER +
            DO.obs + no3n_mgl + doc_mgl, data = scaled)
