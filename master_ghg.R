@@ -1,7 +1,7 @@
 # Master file for NHC ghg analyses
 # A Carter
 # 2020-02-14
-setwd('C:/Users/Alice Carter/git/ghg_patterns_nhc/')
+setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/')
 
 # Compile ghg dataframe and all drivers
   # this script also fills in missing driver points using other data
@@ -15,7 +15,7 @@ setwd('C:/Users/Alice Carter/git/ghg_patterns_nhc/')
 # Build linear mixed effects models for gas conc and flux
   # attempt at PCA's
   # Plots of all NHC UNHC water chem data, pca for discharge
-  source('src/ghg_analysis.R')
+  source('src/GHG_linear_models.R')
 
 # Mass balance in each reach along the continuum
   source('src/ghg_mass_balance.R')
