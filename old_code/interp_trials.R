@@ -4,7 +4,14 @@ library(mice)
 
 setwd('C:/Users/Alice Carter/git/ghg_patterns_nhc/')
 # source('src/helpers.R')
-
+filelist <- list.files('../nhc_50yl/data/metabolism/processed/')
+d <- tibble()
+for(i in filelist){
+    dd <- read_csv(paste0('../nhc_50yl/data/metabolism/processed/', i))
+    d <- bind_rows(d, dd)
+}
+d <- filter(d, site!= PWC)
+write_csv(d, 'data/processed_sensor/compiled_nhc_dat.csv')
 d = read_csv('data/processed_sensor/compiled_nhc_dat.csv')
 
 d = d %>%
@@ -39,34 +46,34 @@ for(dfc in colnames(d_interp)[-1]){
     mtext(dfc, 3, line=-4)
 }
 
-dd <- d_interp %>% 
-    select(DateTime_UTC, DO.obs_WB, DO.obs_WBP, DO.obs_UNHC) %>% 
+dd <- d_interp %>%
+    select(DateTime_UTC, DO.obs_WB, DO.obs_WBP, DO.obs_UNHC) %>%
     filter(DateTime_UTC > ymd_hms("2020-03-01 00:00:00"))
 write_csv(dd, 'data/processed_sensor/interp_DO_march2020.csv')
 
 # replace in processed files:
     site = 'WBP'
-    dat <- read_csv(paste0("../hall_50yl2/NHC_2019_metabolism/data/metabolism/processed/", 
+    dat <- read_csv(paste0("../hall_50yl2/NHC_2019_metabolism/data/metabolism/processed/",
                            site, ".csv"), guess_max = 10000)
     dat <- full_join(dat, tmp, by = 'DateTime_UTC') %>%
         mutate(DO.sat = ifelse(!is.na(DO.sat), DO.sat, DO.sat2),
-               temp.water = ifelse(!is.na(temp.water), 
+               temp.water = ifelse(!is.na(temp.water),
                                     temp.water, watertemp_C2)) %>%
         select(-DO.sat2, -watertemp_C2)
-    write_csv(dat, paste0("../hall_50yl2/NHC_2019_metabolism/data/metabolism/processed/", 
+    write_csv(dat, paste0("../hall_50yl2/NHC_2019_metabolism/data/metabolism/processed/",
                           site, ".csv"))
 
 # make sure they have all the other business they need:
 tmp = read_csv('data/processed_sensor/compiled_nhc_dat.csv') %>%
     filter(DateTime_UTC > ymd_hms("2020-03-01 00:00:00")) %>%
     group_by(DateTime_UTC) %>%
-    summarize(DO.sat2 = mean(DO.sat, na.rm = T), 
+    summarize(DO.sat2 = mean(DO.sat, na.rm = T),
               watertemp_C2 = mean(watertemp_C, na.rm = T))
 
 ggplot(dat, aes(DateTime_UTC, watertemp_C)) +
     geom_line()
 
-    
+
 # mice (one of 5 models) ####
 
 d_mice <- mice(d[, -1], m=5, method = 'pmm')

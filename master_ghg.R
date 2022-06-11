@@ -17,7 +17,15 @@ setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/')
   # Plots of all NHC UNHC water chem data, pca for discharge
   source('src/GHG_linear_models.R')
 
+# calculate excess gas ratios and plot
+  source('src/plots/plot_excess_gas_ratios.R')
+
+# Calculate numbers for the results section:
+  source('src/calc_numbers_for_results.R')
+
 # Mass balance in each reach along the continuum
   source('src/ghg_mass_balance.R')
+
+
 
 
