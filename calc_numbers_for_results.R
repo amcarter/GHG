@@ -115,6 +115,14 @@ dat %>% dplyr::select(c(group, N2O.flux_mgm2d)) %>%
                             sd = ~sd(., na.rm = T),
                             n = ~n()))
 
+# site Characteristics####
+dat %>%
+    select(site,  depth) %>%
+    group_by(site) %>%
+    summarize(across(everything(), .fns = list(mean, sd)))
+
+
+
 ins <- read_csv('data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv')
 ss <- ins %>%
   select(site, date, CO2_flux, NEP, Extra, instr) %>%

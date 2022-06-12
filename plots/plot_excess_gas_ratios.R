@@ -21,7 +21,7 @@ ghg_nhc <- ghg %>%
   #        DO.obs, doc_mgl, CH4.ugL) %>%
   filter(site != "MC751")
 slope <- read_csv('data/sites_slope_comparison.csv') %>%
-  select(site, slope)
+  select(site, slope_mm)
 
 ghg_nhc <- ghg_nhc %>% left_join(slope) %>%
   mutate(wrt_days = depth *width_march_m*1000/discharge/60/60/24,
@@ -45,7 +45,7 @@ png('figures/CO2_vs_WRT_plot.png', width = 5, height = 4, units = 'in',
     family = 'cairo', res = 300)
 ghg_nhc %>%
   mutate(site = factor(site, levels = c('UNHC', 'WBP','WB','CBP','PM','NHC')),
-         slope_F = ifelse(slope >0.003, "H", "L"))%>%
+         slope_F = ifelse(slope_mm >0.003, "H", "L"))%>%
   mutate(CO2_turnover_d = CO2_turnover_m * width_march_m * depth/discharge/60/60/24) %>%
   # pivot_longer(ends_with('rtd'), names_to = 'gas', values_to = 'restime',
   #              names_pattern = '([A-Z,0-9]+)_rtd')%>%
@@ -102,9 +102,10 @@ png('figures/excess_O2_CH4_CO2_plot.png', width = 8, height = 4, units = 'in',
 dev.off()
 
 summary(lm(del_O2 ~ del_CO2, data = ghg_nhc))
-
-
-
+ghg_nhc$delll <- ghg_nhc$del_CH4/ghg_nhc$del_CO2
+ghg_nhc%>% group_by(group) %>%
+    summarize(m = mean(delll))
+sd(ghg_nhc$delll)
 png("figures/CO2O2_grab_NEP.png", width = 5, height = 3.5,
     units = "in", res = 300)
 ggplot(ghg_nhc, aes(del_CO2, del_O2, color = factor(site))) +
@@ -190,10 +191,31 @@ tmp <- ghg_nhc %>%
   mutate(CO2_flux = (CO2.flux_ugld * depth)/1000,
          NEP_CO2 = ((ER - GPP)*44/32/1.25),
          NEP = ifelse(NEP_CO2>0, NEP_CO2, 0),
+         NEP_CO2_high = ((ER - GPP)*44/32 *1),
+         NEP_high = ifelse(NEP_CO2_high>0, NEP_CO2_high, 0),
+         NEP_CO2_low = ((ER - GPP)*44/32 *0.6),
+         NEP_low = ifelse(NEP_CO2_low>0, NEP_CO2_low, 0),
          Extra = case_when(CO2_flux < 0~ NA_real_,
                            CO2_flux < NEP ~ 0,
                            TRUE ~ CO2_flux- NEP),
+         Extra_high = case_when(CO2_flux < 0~ NA_real_,
+                           CO2_flux < NEP_high ~ 0,
+                           TRUE ~ CO2_flux- NEP_high),
+         Extra_low = case_when(CO2_flux < 0~ NA_real_,
+                           CO2_flux < NEP_low ~ 0,
+                           TRUE ~ CO2_flux- NEP_low),
          instr = NEP/CO2_flux,
+         # instr = case_when(instr < 0 ~ 0,
+         #                   instr > 1 ~ 1,
+         #                   TRUE ~instr),
+         instr_high = NEP_high/CO2_flux,
+         # instr_high = case_when(instr_high < 0 ~ 0,
+         #                   instr_high > 1 ~ 1,
+         #                   TRUE ~instr_high),
+         instr_low = NEP_low/CO2_flux,
+         # instr_low = case_when(instr_low < 0 ~ 0,
+         #                   instr_low > 1 ~ 1,
+         #                   TRUE ~instr_low),
          date = as.Date(group),
          CO2.umol = CO2.ugL/44,
          CH4CO2 = (CH4.ugL/16)/(CO2.umol),
@@ -203,6 +225,10 @@ tmp <- ghg_nhc %>%
          site = factor(site, levels = c('UNHC', 'WBP','WB','CBP','PM','NHC')))
   # select(site, date, instr, CO2_flux, discharge, NEP_CO2, Extra, NEP, CH4CO2)
 write_csv(tmp, 'data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv')
+
+summary(lm(del_CO2 ~ NEP_CO2, data = tmp))
+summary(lm(del_O2 ~ NEP_CO2, data = tmp))
+11.039/14.58
 
 plot(tmp$date, tmp$CH4CO2, pch = 19)
 points(tmp$date, tmp$CH4CO2_extra)
@@ -247,10 +273,16 @@ ggarrange(ss, dd, ncol = 1)
 dev.off()
 
 tmp %>% group_by(site) %>%
-  summarize(instr =  mean(instr, na.rm = T))
+  summarize(across(starts_with('instr'),  mean, na.rm = T))
 tmp %>% group_by(date) %>%
-  summarize(instr =  mean(instr, na.rm = T))
+  summarize(across(starts_with('instr'),  mean, na.rm = T))
 
+tmp %>% select(site, date, starts_with(c('NEP_CO2', 'Extra'))) %>%
+    # filter(site == "UNHC") %>%
+    arrange(Extra) %>% filter(NEP_CO2 <0)
+
+tmp %>% filter(NEP_CO2_low > 0) %>% select(NEP_CO2_low) %>% summarize(s = sum(NEP_CO2_low))
+tmp %>% filter(NEP_CO2_high > 0) %>% select(NEP_CO2_high) %>% summarize(s = sum(NEP_CO2_high))
 summary(tmp)
 plot(tmp$NEP_CO2, tmp$CH4CO2)
 ggplot(tmp, aes(discharge, instr, col = date)) + geom_point(size = 3)

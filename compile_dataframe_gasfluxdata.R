@@ -1,6 +1,6 @@
 # Prep data frame with variables for NHC ghg analysis
 # 2021 01 03
-
+i
 library(tidyverse)
 library(lubridate)
 library(zoo)
@@ -61,7 +61,7 @@ sites <- site_dat[1:6, 1, drop = T]
 #   raw = bind_rows(raw, dat)
 # }
 # Q <- read_csv('../nhc_50yl/data/rating_curves/interpolatedQ_allsites_long.csv') %>%
-#     select(DateTime_UTC, site, discharge_complete = discharge, notes_rc)
+#     dplyr::select(DateTime_UTC, site, discharge_complete = discharge, notes_rc)
 #
 # raw <- left_join(raw, Q, by = c('DateTime_UTC', 'site'))
 #
@@ -297,3 +297,4 @@ d2 <- dat %>%
 #   facet_wrap(.~site)
 apply(d2, 2, function(x) sum(is.na(x)))
 write_csv(d2, "data/ghg_flux_complete_drivers_dataframe_noNAs.csv")
+

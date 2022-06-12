@@ -22,17 +22,18 @@ dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 #   dplyr::select(site, slope_wbx = slope, slope_nhd) %>%
 #   group_by(site) %>%
 #   summarize_all(mean, na.rm = T) %>%
-#   mutate(slope_2deg = (atan(6 * tan(slope_wbx*pi/180)) * (180/pi)),
-#          slope = tan(slope_2deg * pi/180))
+#   # whitebox slopes need to be rescaled because they were calculated on grouped cells (of 6)
+#   # so the degrees are off in the original measurements:
+#   mutate(slope_deg = (atan(6 * tan(slope_wbx*pi/180)) * (180/pi)),
+#          slope_mm = tan(slope_deg * pi/180))
 #
 # write_csv(slope, 'data/sites_slope_comparison.csv')
 slope <- read_csv('data/sites_slope_comparison.csv')
 
 dat <- dat %>%
-  left_join(slope[,c(1:2)]) %>%
-  rename(slope_deg = slope_wbx)
+  left_join(slope[,c(1:2)])
 
-ggplot(slope, aes(slope_nhd, slope, col = site)) + geom_point() +
+ggplot(slope, aes(slope_nhd, slope_mm, col = site)) + geom_point() +
   geom_abline(slope = 1, intercept = 0)
 
 png('figures/gas_evasion_coef_by_site.png', width = 6, height = 3, res = 300,
