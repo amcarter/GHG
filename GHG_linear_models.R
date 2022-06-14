@@ -6,13 +6,14 @@ library(lubridate)
 library(MASS)
 library(HH)
 library(MuMIn)
-library(lme4)
+# library(lme4)
 library(nlme)
 library(lmerTest)
 library(car)
 
 setwd("C:/Users/alice.carter/git/ghg_patterns_nhc/")
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
+dat <- read_csv("data/ghg_flux_complete_drivers_dataframe_individual_samples.csv")
 
 # load slopes from whitebox
 # slope <- read_csv('data/sites_whitebox_slopes.csv') %>%
@@ -31,7 +32,7 @@ dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 slope <- read_csv('data/sites_slope_comparison.csv')
 
 dat <- dat %>%
-  left_join(slope[,c(1:2)])
+  left_join(slope[,c(1,5)])
 
 ggplot(slope, aes(slope_nhd, slope_mm, col = site)) + geom_point() +
   geom_abline(slope = 1, intercept = 0)
@@ -85,23 +86,30 @@ scaled <- dat %>%
          # logWRT = log(1000*depth*width_march_m/discharge),
          no3n_mgl = ifelse(no3n_mgl == 0, 0.0015, no3n_mgl), # replace zero with mdl
          site = factor(site, levels=c('UNHC','WBP','WB','CBP','PM','NHC')),
-         log_no3n = log(no3n_mgl)
+         log_no3n = log(no3n_mgl),
+         log_doc = log(doc_mgl)
          ) %>%
-    dplyr::select(site, logQ, watertemp_C, ER, GPP, DO.obs, slope_deg, depth,
-            log_no3n, doc_mgl, ends_with(c("ugld", "ugL", 'mgm2d'))) %>%
-    mutate(across(-c(site), ~ scale(.)[,1, drop = T]),
-         across(c(site), ~ factor(.)))
+    dplyr::select(site, sample, logQ, watertemp_C, ER, GPP, DO.obs, slope_mm, depth,
+            log_no3n, log_doc, ends_with(c("ugld", "ugL", 'mgm2d'))) %>%
+    mutate(across(-any_of(c('site', 'sample')), ~ scale(.)[,1, drop = T]),
+         across(all_of(c('site', 'sample')), ~ factor(.)))
 
 
 preds <- scaled %>%
-  dplyr::select(logQ, watertemp_C, GPP, ER, slope_deg, DO.obs,
-         log_no3n, doc_mgl, depth)
+  dplyr::select(site, sample, logQ, watertemp_C, GPP, ER, slope_mm, DO.obs,
+         log_no3n, log_doc, depth)
 
 pred_cov <- data.frame(cov(preds))
 write_csv(pred_cov, 'data/linear_models/predictor_covariance_matrix.csv')
 
-cor.test(preds$doc_mgl, preds$depth, method = 'pearson')
+# correlated predictors(r > 0.5)
+cor.test(preds$logQ, preds$GPP, method = 'pearson')
+cor.test(preds$logQ, preds$log_doc, method = 'pearson')
+cor.test(preds$logQ, preds$depth, method = 'pearson')
+cor.test(preds$watertemp_C, preds$GPP, method = 'pearson')
+cor.test(preds$ER, preds$DO.obs, method = 'pearson')
 
+# functions for assessing models ####
 PRESS <- function(linear.model) {
   #' calculate the predictive residuals
   pr <- residuals(linear.model)/(1-lm.influence(linear.model)$hat)
@@ -125,19 +133,182 @@ pred_r_squared <- function(linear.model) {
 
 #testing if random effects are important ####
   #is the correlation within sites higher than the correlation between sites?
+determine_site_signif <- function(y, scaled, flux = FALSE){
+    scaled$y <- y
+    # how much additional variation is explained by site, once slope and depth are acct'd for?
+    grp <- scaled %>%
+        group_by(sample, site) %>%
+        summarize(across(any_of(c('y', 'slope_mm', 'depth')), mean, na.rm = T))
+    lme0site <- lme4::lmer(y~ (1|site) + slope_mm + depth, data=grp)
+    if(flux){lme0site <- lme4::lmer(y ~ (1|site) + slope_mm, data=grp)}
+    vnc <- as.data.frame(VarCorr(lme0site))$vcov
+    add_var <- vnc[1]/sum(vnc)
 
-names(scaled)
-#random intercepts model
-lme0site <- lme(CH4.ugL~1, random=~1|site, data=scaled)
-# lme0site <- lme4::lmer(CH4.ugL~1 + (1|site), data=scaled)
-summary(lme0site)
-VarCorr(lme0site)
-tau.sq<-as.numeric(VarCorr(lme0site)[1,1])
-sigma.sq<-as.numeric(VarCorr(lme0site)[2,1])
-tau.sq/(tau.sq+sigma.sq)
-#correlation between observations at the same site is only 0.01
-#probably doesn't justify a lme model - at least that makes it easier!
-# test if a random effects model is justified
+
+    av <- anova(lm(y ~ site, data = grp))
+
+    p_val <- av$`Pr(>F)`[1]
+
+    return(data.frame(add_var = add_var,
+                      p_val = p_val))
+}
+
+# note, a singular fit just means one of your variances is very close to zero, which we expect in some of these models!
+site_sig <- data.frame()
+site_sig <- determine_site_signif(scaled$CO2.ugL, scaled) %>%
+    mutate(gas = 'CO2conc') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$CO2.flux_mgm2d, scaled, TRUE) %>%
+    mutate(gas = 'CO2flux') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$DO.obs, scaled) %>%
+    mutate(gas = 'O2conc') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$O2.flux_mgm2d, scaled, TRUE) %>%
+    mutate(gas = 'O2flux') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$CH4.ugL, scaled) %>%
+    mutate(gas = 'CH4conc') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$CH4.flux_mgm2d, scaled, TRUE) %>%
+    mutate(gas = 'CH4flux') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$N2O.ugL, scaled) %>%
+    mutate(gas = 'N2Oconc') %>%
+    bind_rows(site_sig)
+site_sig <- determine_site_signif(scaled$N2O.flux_mgm2d, scaled, TRUE) %>%
+    mutate(gas = 'N2Oflux') %>%
+    bind_rows(site_sig)
+
+calc_loocv_rmse <- function(scaled, formula){
+    rsqe <- rep(NA, nrow(scaled))
+    for(i in 1:nrow(scaled)){
+        sc <- scaled[-i,]
+        mm <- lmer(formula, data = sc)
+        p <- try( predict(mm, newdata = scaled, allow.new.levels = TRUE)[i] )
+        if(inherits(p, 'try-error')) next
+
+        rsqe[i] <- (p - scaled$CH4.ugL[i])^2
+    }
+    loocv = sqrt(mean(rsqe, na.rm = T))
+    return(loocv)
+}
+search_lmer <- function(y, preds, gas, flux = 'no'){
+    if(gas == 'O2'){
+        preds <- dplyr::select(preds, -DO.obs)
+    }
+
+    vars <- colnames(preds)[3:ncol(preds)]
+    nvar <- min(length(vars), 5)
+    preds$y <- y
+    m1 <- lmer(y ~ (1|sample) + (1|site), data = preds)
+    mods <- data.frame(sample = TRUE, site = TRUE) %>%
+        mutate(aicc = AICc(m1),
+               singular = isSingular(m1),
+               vif = 0)
+    mods <- bind_cols(mods, r.squaredGLMM(m1))
+    # models without site:
+    for(nv in 1:nvar){
+        vsets <- combn(length(vars), nv)
+        for(i in 1:ncol(vsets)){
+            vv = vars[vsets[,i]]
+            r <- as.data.frame(matrix(ncol = nv, rep(TRUE,nv)))
+            colnames(r) <- vv
+            m1 <- lmer(paste0('y ~ (1|sample) + ', paste(vv, collapse = ' + ')),
+                       data = preds)
+            r1 <- mutate(r, sample = TRUE)
+            m2 <- lmer(paste0('y ~ (1|sample) + (1|site) +',
+                              paste(vv, collapse = ' + ')),
+                       data = preds)
+            r2 <- mutate(r1, site = TRUE)
+            r1$aicc <- AICc(m1)
+            r1$singular = isSingular(m1)
+            r1 <- bind_cols(r1, r.squaredGLMM(m1))
+            r1$rmse <- sqrt(mean((residuals(m1))^2))
+            r2$aicc <- AICc(m2)
+            r2 <- bind_cols(r2, r.squaredGLMM(m2))
+            r2$singular = isSingular(m2)
+            r2$rmse <- sqrt(mean((residuals(m2))^2))
+            r1$vif <- r2$vif <- 0
+            if(nv >1){
+                r1$vif <- max(vif(m1))
+                r2$vif <- max(vif(m2))
+            }
+            mods <- bind_rows(mods, r2, r1)
+        }
+    }
+
+    if(flux == 'flux'){
+        mods <- filter(mods, is.na(depth)) %>%
+            dplyr::select(-depth)
+    }
+
+    if(gas != 'N2O'){
+        mods <- filter(mods, is.na(log_no3n)) %>%
+            dplyr::select(-log_no3n)
+    }
+
+    mods <- mods %>% tibble() %>%
+        filter(vif < 5,
+               !(!is.na(log_doc) & !is.na(logQ))) %>%
+        arrange(aicc) %>%
+        mutate(delta_aicc = aicc - min(aicc)) %>%
+        # filter(delta_aicc < 5) %>%
+        slice(1:10) %>%
+        mutate(rel_likelihood = exp(-0.5 * delta_aicc),
+               aicc_weight = rel_likelihood/sum(rel_likelihood),
+               gas = gas,
+               flux = flux)
+
+    site = TRUE
+    if(is.na(mods[1,'site'])) site = FALSE
+
+    m <- mods[1,] %>%
+        dplyr::select(-site, -sample) %>%
+        select_if(isTRUE)
+    vars <- colnames(m)
+
+    mm <- lmer(paste0('y ~ (1|sample) + ', paste(vars, collapse = ' + ')),
+               data = preds)
+    if(site){
+        mm <- lmer(paste0('y ~ (1|sample) + (1|site) + ',
+                          paste(vars, collapse = ' + ')),
+               data = preds)
+    }
+
+    return(list(mods = mods, m1 = mm))
+}
+
+best_lmes <- data.frame()
+out_ch4 <- search_lmer(scaled$CH4.ugL, preds, 'CH4')
+best_lmes <- bind_rows(best_lmes, out_ch4$mods)
+out_ch4f <- search_lmer(scaled$CH4.flux_mgm2d, preds, 'CH4', 'flux')
+best_lmes <- bind_rows(best_lmes, out_ch4f$mods)
+out_N2O <- search_lmer(scaled$N2O.ugL, preds, 'N2O')
+best_lmes <- bind_rows(best_lmes, out_N2O$mods)
+out_N2Of <- search_lmer(scaled$N2O.flux_mgm2d, preds, 'N2O', 'flux')
+best_lmes <- bind_rows(best_lmes, out_N2Of$mods)
+out_CO2 <- search_lmer(scaled$CO2.ugL, preds, 'CO2')
+best_lmes <- bind_rows(best_lmes, out_CO2$mods)
+out_CO2f <- search_lmer(scaled$CO2.flux_mgm2d, preds, 'CO2', 'flux')
+best_lmes <- bind_rows(best_lmes, out_CO2f$mods)
+
+# out_O2 <- search_lmer(scaled$DO.obs, preds, 'O2')
+# best_lmes <- bind_rows(best_lmes, out_O2$mods)
+# out_O2f <- search_lmer(scaled$O2.flux_mgm2d, preds, 'O2', 'flux')
+# best_lmes <- bind_rows(best_lmes, out_O2f$mods)
+write_csv(best_lmes, 'data/linear_models/best_lme_summaries.csv')
+mods <- list(CH4.conc = out_ch4$m1,
+             CH4.flux = out_ch4f$m1,
+             CO2.conc = out_CO2$m1,
+             CO2.flux = out_CO2f$m1,
+             N2O.conc = out_N2O$m1,
+             N2O.flux = out_N2Of$m1)
+
+saveRDS(mods, 'data/linear_models/best_lmes.csv')
+
+summary(out_ch4$m1)
+
 #one thought was that GHG patterns by site were more stable than between sites
 #so should probably test the site as a fixed effect
 

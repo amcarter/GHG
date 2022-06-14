@@ -1,6 +1,6 @@
 # Prep data frame with variables for NHC ghg analysis
 # 2021 01 03
-i
+
 library(tidyverse)
 library(lubridate)
 library(zoo)
@@ -29,9 +29,9 @@ ghg <- ghg %>%
   mutate(datetime = round_date(ymd_hms(paste(date, time), tz = 'EST'),
          unit = "15 minute")) %>%
   dplyr::select(-Notes, -date, -time) %>%
-  group_by(site, datetime) %>%
-  summarize(across(everything(), mean, na.rm = T)) %>%
-  ungroup() %>%
+  # group_by(site, datetime) %>%
+  # summarize(across(everything(), mean, na.rm = T)) %>%
+  # ungroup() %>%
   mutate(date = as.Date(datetime, tz = "EST")) %>%
   left_join(ysi, by = c('site', 'date')) %>%
   mutate(group = case_when(date == as.Date("2019-12-04") ~ "2019-12-03",
@@ -151,13 +151,16 @@ raw_daily <- raw_dat %>%
   select(-level_m)
 
 qq <- left_join(ghg, raw_daily, by = c('site', 'date')) %>%
-  select(site, date, discharge) %>%
-  pivot_wider(names_from = site, values_from = discharge) %>%
-  mutate(NHCQ = NHC) %>%
-  pivot_longer(c(-date, -NHCQ), names_to = "site", values_to = "discharge")
+    select(site, date, discharge) %>%
+    group_by(date, site) %>%
+    summarize(discharge = mean(discharge, na.rm = T)) %>%
+    ungroup() %>%
+    pivot_wider(names_from = site, values_from = discharge) %>%
+    mutate(NHCQ = NHC) %>%
+    pivot_longer(c(-date, -NHCQ), names_to = "site", values_to = "discharge")
 Q <- raw_daily %>%
-  select(site, date, discharge) %>%
-  pivot_wider(names_from = site, values_from = discharge)
+    select(site, date, discharge) %>%
+    pivot_wider(names_from = site, values_from = discharge)
 
 for(ss in c('CBP', 'UNHC', 'PM')){
   m <- summary(lm(log(Q[,ss, drop = T])~log(Q$NHC)))$coefficients
@@ -218,20 +221,21 @@ SP_wchem <- read_csv('data/water_chemistry/StreampulseWQDec2020.csv') %>%
                               as.Date('2020-03-11'),
                             TRUE ~ date))
 dat_ghg <- dat_inst %>%
-  left_join(SP_wchem, by = c("date", "site")) %>%
-  left_join(met, by = c("date", "site")) %>%
-  left_join(raw_daily, by = c('site', 'date')) %>%
-  arrange(date, distance_upstream_m)
+    left_join(SP_wchem, by = c("date", "site")) %>%
+    left_join(met, by = c("date", "site")) %>%
+    left_join(raw_daily, by = c('site', 'date')) %>%
+    arrange(date, distance_upstream_m) %>%
+    mutate(sample = paste(site, group, sep = '_'))
 
 colnames(qq) <- c('site', 'date', paste0(colnames(qq)[3:6], '.2'))
 
 dat_ghg <- dat_ghg %>%
-  left_join(qq, by = c('site', 'date')) %>%
-  mutate(discharge = ifelse(!is.na(discharge), discharge, discharge.2),
+    left_join(qq, by = c('site', 'date')) %>%
+    mutate(discharge = ifelse(!is.na(discharge), discharge, discharge.2),
          K600 = ifelse(!is.na(K600), K600, K600.2),
          K600_2.5 = ifelse(!is.na(K600_2.5), K600_2.5, K600_2.5.2),
          K600_97.5 = ifelse(!is.na(K600_97.5), K600_97.5, K600_97.5.2)) %>%
-  select(-ends_with('.2'))
+    select(-ends_with('.2'))
 
 dat_ghg<- dat_ghg %>%
     mutate(DO.obs = ifelse(!is.na(DO.obs), DO.obs, DO.obs.inst),
@@ -257,6 +261,7 @@ dat_ghg_predictors <- SP_wchem %>%
 # apply( 2, function(x) sum(is.na(x)))
 
 write_csv(dat_ghg, 'data/ghg_complete_drivers_dataframe.csv')
+# dat_ghg <- read_csv('data/ghg_complete_drivers_dataframe_individual_samples.csv')
 write_csv(dat_ghg_predictors, 'data/ghg_filled_drivers_dataframe.csv')
 
 # calculate gas flux ####
@@ -276,7 +281,8 @@ K <-  data.frame(K600 = dat_ghg$K600,
          N2O.flux_ugld = (N2O.ugL - N2O.sat) * K_N2O,
          O2.flux_ugld = (DO.obs - DO.sat) * K_O2 * 1000)
 
-write_csv(K, "data/ghg_flux_complete_drivers_dataframe.csv")
+# write_csv(K, "data/ghg_flux_complete_drivers_dataframe.csv")
+write_csv(K, "data/ghg_flux_complete_drivers_dataframe_individual_samples.csv")
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 
 # pare down to have fewer NA's
