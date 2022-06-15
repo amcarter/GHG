@@ -245,24 +245,49 @@ dat_ghg<- dat_ghg %>%
                               watertemp_C.inst)) %>%
     select(-notes_rc)
 
+# load slopes from whitebox
+# slope <- read_csv('data/sites_whitebox_slopes.csv') %>%
+#   slice(c(1:4,6,7)) %>%
+#   mutate(site = c("NHC", 'PM', 'CBP', 'WB', 'WBP','UNHC')) %>%
+#   left_join(dat, by = 'site') %>%
+#   dplyr::select(site, slope_wbx = slope, slope_nhd) %>%
+#   group_by(site) %>%
+#   summarize_all(mean, na.rm = T) %>%
+#   # whitebox slopes need to be rescaled because they were calculated on grouped cells (of 6)
+#   # so the degrees are off in the original measurements:
+#   mutate(slope_deg = (atan(6 * tan(slope_wbx*pi/180)) * (180/pi)),
+#          slope_mm = tan(slope_deg * pi/180))
+#
+# write_csv(slope, 'data/sites_slope_comparison.csv')
+slope <- read_csv('data/sites_slope_comparison.csv')
+
+dat_ghg <- dat_ghg %>%
+    left_join(slope[,c(1,5)])
+
 date_rng = range(ghg$date)
 dat_ghg_predictors <- SP_wchem %>%
     full_join(met, by = c("date", "site")) %>%
     full_join(raw_daily, by = c('site', 'date')) %>%
     left_join(site_dat, by = 'site') %>%
+    left_join(slope[,c(1,5)], by = 'site') %>%
     filter(date <= date_rng[2], date >= date_rng[1]) %>%
     arrange(date, distance_upstream_m) %>%
     select(-notes_rc)
 
+write_csv(dat_ghg, 'data/ghg_complete_drivers_dataframe_individual_samples.csv')
+write_csv(dat_ghg_predictors, 'data/ghg_filled_drivers_dataframe.csv')
 # filter(dat_ghg, site != 'MC751') %>%
 # ggplot(aes(date, ER, col = site)) +
 #   geom_point() +
 #   geom_line()
 # apply( 2, function(x) sum(is.na(x)))
+dat_ghg %>%
+    group_by(site, sample, date, datetime, group,
+             latitude, longitude, CRS, habitat) %>%
+    summarize(across(everything(), mean, na.rm = T)) %>%
+    ungroup() %>%
+write_csv('data/ghg_complete_drivers_dataframe.csv')
 
-write_csv(dat_ghg, 'data/ghg_complete_drivers_dataframe.csv')
-# dat_ghg <- read_csv('data/ghg_complete_drivers_dataframe_individual_samples.csv')
-write_csv(dat_ghg_predictors, 'data/ghg_filled_drivers_dataframe.csv')
 
 # calculate gas flux ####
 library(marelac)
@@ -281,8 +306,14 @@ K <-  data.frame(K600 = dat_ghg$K600,
          N2O.flux_ugld = (N2O.ugL - N2O.sat) * K_N2O,
          O2.flux_ugld = (DO.obs - DO.sat) * K_O2 * 1000)
 
-# write_csv(K, "data/ghg_flux_complete_drivers_dataframe.csv")
 write_csv(K, "data/ghg_flux_complete_drivers_dataframe_individual_samples.csv")
+
+K %>%
+    group_by(site, sample, date, datetime, group,
+             latitude, longitude, CRS, habitat) %>%
+    summarize(across(everything(), mean, na.rm = T)) %>%
+    ungroup() %>%
+write_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 
 # pare down to have fewer NA's

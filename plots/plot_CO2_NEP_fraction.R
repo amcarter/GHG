@@ -98,6 +98,8 @@ dp <- dat %>%
            NEP_pos = case_when(NEP_CO2 > 0 & NEP_CO2 < CO2_flux ~ NEP_CO2,
                                NEP_CO2 <= 0 ~0,
                                TRUE ~ CO2_flux))
+png('figures/CO2_flux_from_NEP_date_polygon.png', width = 6.5, height = 4,
+    res = 300,  units = 'in')
 ylim = range(c(dp$CO2_flux, dp$NEP_CO2)) *1.1
 plot(dp$group, dp$CO2_flux, type = 'n',
      ylab = expression(paste(CO[2], ' flux (g/', m^2, '/d)')),
@@ -115,7 +117,10 @@ polygon(c(dp$group, rev(dp$group)), c(dp$CO2_pos, rep(4.85, nrow(dp))),
         col = 'white', border = NA)
 polygon(c(dp$group, rev(dp$group)), c(dp$CO2_neg, rep(-0.45, nrow(dp))),
         col = 'white', border = NA)
-par(new = T)
+dev.off()
+
+png('figures/CO2_flux_from_NEP_date_bar.png', width = 6.5, height = 4,
+    res = 300,  units = 'in')
 
 dp %>%
     mutate(NEP_pos = NEP_pos + NEP_neg,
@@ -124,32 +129,16 @@ dp %>%
                  names_to = 'category', values_to = 'gm2d') %>%
     ggplot(aes(group, gm2d, fill = category) )+
     geom_bar(stat = 'identity') + #ylim(-.1,1) +
-    geom_hline(yintercept = 0)+
+    geom_hline(yintercept = 0, size = .3)+
     ylab('CO2 flux (g/m2/d)') +
     xlab('')+
     guides(fill = F)+
     scale_fill_manual(values = c('grey70', plasma(7)[5]))+
     geom_line(data = dvs,
               aes(x = date, y = (log(discharge)+1.75)/6, fill = NULL),
-              size = 1)+
+              size = .5)+
     theme_bw()+
     theme(plot.margin = unit(c(.1,.2,.2,.2), "cm"),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
-
-png("figures/CO2flux_from_instream_production.png", width = 4.5, height = 3.5,
-    res = 300, family = 'cairo', units = 'in')
-
-dd <-
-ss <- dat %>%
-    pivot_longer(cols = any_of(c("NEP", "Extra")), values_to = "gm2d",
-                 names_to = "category") %>%
-    ggplot(aes(distance_m, gm2d, fill = category) )+
-    geom_bar(stat = 'identity', width = .5) + #ylim(-.1,1) +
-    ylab('CO2 flux (g/m2/d)') +
-    scale_fill_manual(values = c('grey70', plasma(7)[5])))+
-    theme_bw()+
-    theme(plot.margin = unit(c(.2,3,.1,.2), "cm"))
-ggarrange(ss, dd, ncol = 1)
-
 dev.off()

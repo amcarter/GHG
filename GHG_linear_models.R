@@ -15,28 +15,6 @@ setwd("C:/Users/alice.carter/git/ghg_patterns_nhc/")
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe.csv")
 dat <- read_csv("data/ghg_flux_complete_drivers_dataframe_individual_samples.csv")
 
-# load slopes from whitebox
-# slope <- read_csv('data/sites_whitebox_slopes.csv') %>%
-#   slice(c(1:4,6,7)) %>%
-#   mutate(site = c("NHC", 'PM', 'CBP', 'WB', 'WBP','UNHC')) %>%
-#   left_join(dat, by = 'site') %>%
-#   dplyr::select(site, slope_wbx = slope, slope_nhd) %>%
-#   group_by(site) %>%
-#   summarize_all(mean, na.rm = T) %>%
-#   # whitebox slopes need to be rescaled because they were calculated on grouped cells (of 6)
-#   # so the degrees are off in the original measurements:
-#   mutate(slope_deg = (atan(6 * tan(slope_wbx*pi/180)) * (180/pi)),
-#          slope_mm = tan(slope_deg * pi/180))
-#
-# write_csv(slope, 'data/sites_slope_comparison.csv')
-slope <- read_csv('data/sites_slope_comparison.csv')
-
-dat <- dat %>%
-  left_join(slope[,c(1,5)])
-
-ggplot(slope, aes(slope_nhd, slope_mm, col = site)) + geom_point() +
-  geom_abline(slope = 1, intercept = 0)
-
 png('figures/gas_evasion_coef_by_site.png', width = 6, height = 3, res = 300,
     units = 'in', family = 'cairo')
 filter(dat, site !='MC751') %>%

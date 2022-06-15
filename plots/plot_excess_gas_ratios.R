@@ -20,10 +20,9 @@ ghg_nhc <- ghg %>%
   # select(del_CO2, del_O2, del_CH4, site, discharge, watertemp_C, ER, GPP,
   #        DO.obs, doc_mgl, CH4.ugL) %>%
   filter(site != "MC751")
-slope <- read_csv('data/sites_slope_comparison.csv') %>%
-  select(site, slope_mm)
 
-ghg_nhc <- ghg_nhc %>% left_join(slope) %>%
+
+ghg_nhc <- ghg_nhc %>%
   mutate(wrt_days = depth *width_march_m*1000/discharge/60/60/24,
          CH4_rtd = (CH4.ugL * width_march_m * depth * 1000)/
            (CH4.ugL *discharge * 60*60 *24 +
@@ -71,31 +70,36 @@ png('figures/excess_O2_CH4_CO2_plot.png', width = 8, height = 4, units = 'in',
     geom_smooth(method = lm, se = F, col = '#999999')+
     geom_point(size = 2) +
     scale_color_gradientn(colors = plasma(8)[1:7],
-                          name = 'Discharge (m3/s)',
+                          name = expression(Discharge (m^3/s)),
                           na.value = "grey80",
-                          breaks = c(-1,-.30103, .30103),
-                          labels = c(0.1,0.5,2)) +
-    xlab("CO2 departure (umol/L)") +
-    ylab("CH4 departure (umol/L)") +
+                          breaks = c(-0.69897,-.1549, .39794),
+                          labels = c(0.2,0.7,2.5)) +
+    labs(x = expression(paste(CO[2], " departure (", mu, "mol/L)")),
+         y = expression(paste(CH[4], " departure (", mu, "mol/L)"))) +
     theme_bw()+
-    theme(legend.key.size = unit(0.5,'cm'),
-          legend.title = element_text(size = 8.5),
-          legend.position = c(.4, .9),
-          legend.direction = 'horizontal')
+    theme(legend.key.size = unit(0.6,'cm'),
+          legend.title = element_text(size = 10),
+          legend.position = c(.38, .9),
+          legend.direction = 'horizontal',
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
 
   DO <- ggplot(ghg_nhc, aes(del_CO2, del_O2, color = GPP-ER)) +
     geom_smooth(method = lm, se = F, col = '#999999')+
     geom_point(size = 2) +
     geom_abline(slope = -1.25, intercept = 0, lty = 2, lwd = .5) +
     scale_color_gradientn(colors = c(plasma(7)[c(4:6)],'forestgreen'),
-                          name = 'NEP (gO2/m2/d)', na.value = "grey80")+#plasma(6)[1:5]) +
-    xlab("CO2 departure (umol/L)") +
-    ylab("O2 departure (umol/L)") +
+                          name = expression(NEP (gO[2]/m^2/d)),
+                          na.value = "grey80")+#plasma(6)[1:5]) +
+    labs(x = expression(paste(CO[2], " departure (", mu, "mol/L)")),
+         y = expression(paste(O[2], " departure (", mu, "mol/L)"))) +
     theme_bw()+
-    theme(legend.key.size = unit(0.5,'cm'),
-          legend.title = element_text(size = 8.5),
-      legend.position = c(.6, .9),
-      legend.direction = 'horizontal')
+    theme(legend.key.size = unit(0.6,'cm'),
+          legend.title = element_text(size = 10),
+          legend.position = c(.62, .9),
+          legend.direction = 'horizontal',
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
 
   ggarrange( DO,CH, ncol = 2)
 
