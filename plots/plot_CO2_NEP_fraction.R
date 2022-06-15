@@ -4,14 +4,15 @@ setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/')
 library(tidyverse)
 library(ggpubr)
 library(introdataviz)
+library(viridis)
 
 dat <- read_csv('data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv') %>%
     mutate(distance_m = 8450 - distance_upstream_m,
            distance_m = factor(distance_m))
 dvs <- read_csv("data/ghg_filled_drivers_dataframe.csv") %>%
     filter(site == 'UNHC')
-           date >= min(unique(dat$group)),
-           date <= max(unique(dat$group)))
+           # date >= min(unique(dat$group)),
+           # date <= max(unique(dat$group)))
 
 dat%>%
     group_by(group)%>%
@@ -50,42 +51,6 @@ dmeans$gm2d_high[1:6] <-
 col.NEP <- 'forestgreen'
 col.NER <- plasma(7)[5]
 col.xs <- 'grey80'
-png('figures/CO2_flux_from_NEP_site_violins.png', width = 6.5, height = 4,
-    res = 300,  units = 'in')
-ggplot(dd, aes(distance_m, gm2d, fill = category) )+
-    introdataviz::geom_split_violin(alpha = .4, trim = FALSE, adjust = 1.1) +
-    introdataviz::geom_split_violin(aes(y = gm2d_low),
-                                    alpha = .4, trim = FALSE, adjust = 1.1) +
-    introdataviz::geom_split_violin(aes(y = gm2d_high),
-                                    alpha = .4, trim = FALSE, adjust = 1.1) +
-    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d,
-                             lower = gm2d, upper = gm2d, middle = gm2d,
-                             fill = category),
-                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
-                 outlier.shape = NA, coef = 0) +
-    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d_low,
-                             lower = gm2d_low, upper = gm2d_low, middle = gm2d_low,
-                             fill = category),
-                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
-                 outlier.shape = NA, coef = 0) +
-    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d_high,
-                             lower = gm2d_high, upper = gm2d_high, middle = gm2d_high,
-                             fill = category),
-                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
-                 outlier.shape = NA, coef = 0) +
-    scale_fill_manual(values = c(col.xs, col.NER),
-                      name = '',
-                      labels = c(expression(paste('Total ', CO[2], ' flux  ')),
-                                 expression(paste(CO[2], ' from NEP with RQ = 0.6, 0.8, 1                 Distribution median')),
-                                 'median'))+
-    labs(x = 'Distance Downstream (m)',
-         y = expression(paste(CO[2], ' flux (g/', m^2, '/d)')))+
-    theme_bw()+
-    theme(legend.position = 'top',
-          # legend.direction = 'vertical',
-          panel.grid.major = element_blank(),
-          panel.grid.minor = element_blank())
-dev.off()
 dp <- dat %>%
     group_by(group) %>%
     summarize(CO2_flux = median(CO2_flux, na.rm = T),
@@ -119,10 +84,52 @@ polygon(c(dp$group, rev(dp$group)), c(dp$CO2_neg, rep(-0.45, nrow(dp))),
         col = 'white', border = NA)
 dev.off()
 
-png('figures/CO2_flux_from_NEP_date_bar.png', width = 6.5, height = 4,
-    res = 300,  units = 'in')
+# png('figures/CO2_flux_from_NEP_site_violins.png', width = 6.5, height = 4,
+#     res = 300,  units = 'in')
+viols <- ggplot(dd, aes(distance_m, gm2d, fill = category) )+
+    introdataviz::geom_split_violin(alpha = .4, trim = FALSE, adjust = 1.1,
+                                    width = 1.4) +
+    introdataviz::geom_split_violin(aes(y = gm2d_low),
+                                    alpha = .4, trim = FALSE, adjust = 1.1,
+                                    width = 1.4) +
+    introdataviz::geom_split_violin(aes(y = gm2d_high),
+                                    alpha = .4, trim = FALSE, adjust = 1.1,
+                                    width = 1.4) +
+    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d,
+                             lower = gm2d, upper = gm2d, middle = gm2d,
+                             fill = category),
+                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
+                 outlier.shape = NA, coef = 0) +
+    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d_low,
+                             lower = gm2d_low, upper = gm2d_low, middle = gm2d_low,
+                             fill = category),
+                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
+                 outlier.shape = NA, coef = 0) +
+    geom_boxplot(data = dmeans, aes(x = distance_m, y = gm2d_high,
+                             lower = gm2d_high, upper = gm2d_high, middle = gm2d_high,
+                             fill = category),
+                 width = .2, alpha = .6, fatten = NULL, show.legend = FALSE,
+                 outlier.shape = NA, coef = 0) +
+    scale_fill_manual(values = c(col.xs, col.NER),
+                      name = '',
+                      labels = c(expression(paste('Total ', CO[2], ' flux  ')),
+                                 expression(paste(CO[2], ' from NEP')),
+                                 'median'))+
+    labs(x = 'Distance Downstream (m)',
+         y = expression(paste(CO[2], ' flux (g/', m^2, '/d)')))+
+    theme_bw()+
+    theme(legend.position = 'top',
+          axis.title = element_text(size = 9),
+          legend.key.size = unit(0.3,'cm'),
+          legend.text = element_text(size = 9),
+          # legend.direction = 'vertical',
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank())
+# dev.off()
+# png('figures/CO2_flux_from_NEP_date_bar.png', width = 6.5, height = 4,
+#     res = 300,  units = 'in')
 
-dp %>%
+bars <- dp %>%
     mutate(NEP_pos = NEP_pos + NEP_neg,
         Extra = CO2_flux - NEP_pos)%>%
     pivot_longer(cols = any_of(c('NEP_pos', 'Extra')),
@@ -130,15 +137,26 @@ dp %>%
     ggplot(aes(group, gm2d, fill = category) )+
     geom_bar(stat = 'identity') + #ylim(-.1,1) +
     geom_hline(yintercept = 0, size = .3)+
-    ylab('CO2 flux (g/m2/d)') +
-    xlab('')+
+    xlab('Sample Date')+
     guides(fill = F)+
-    scale_fill_manual(values = c('grey70', plasma(7)[5]))+
+    scale_fill_manual(values = c(col.xs, alpha(col.NER, .8)))+
+    scale_y_continuous(name = expression(paste(CO[2], ' flux (g/', m^2, '/d)')),
+                       sec.axis = sec_axis(trans = ~.*30,
+                                name = expression(paste('Discharge (', m^3, '/s)'))))+
     geom_line(data = dvs,
-              aes(x = date, y = (log(discharge)+1.75)/6, fill = NULL),
-              size = .5)+
+              aes(x = date, y = ((discharge))/30, fill = NULL),
+              size = .75, col = 'steelblue4')+
     theme_bw()+
     theme(plot.margin = unit(c(.1,.2,.2,.2), "cm"),
+          axis.title = element_text(size = 9),
+          axis.title.y.right = element_text(color = 'steelblue4', size = 9.5),
+          axis.text.y.right = element_text(color = 'steelblue4'),
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
+# dev.off()
+
+png('figures/CO2_flux_from_NEP_combined.png', width = 6.5, height = 3,
+    res = 300, units = 'in')
+    ggarrange(viols, bars, labels = c('A', 'B'), align = 'h',
+              legend = 'top', common.legend = TRUE, widths = c(1,1.3))
 dev.off()

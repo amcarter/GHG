@@ -126,7 +126,7 @@ ff <- flux %>%
                               '/d                            g/', m^2, '/d')))+
     facet_grid(gas + l1 + ln + l2~., scales = "free_y",
                labeller = label_bquote(rows = .(l1)[.(ln)]~.(l2))) +
-    ggtitle('b) Gas Flux Rates') +
+    ggtitle('Gas Flux Rates') +
     theme_bw() +
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
@@ -143,12 +143,12 @@ cc <- flux %>%
          y = expression(paste(mu, 'g/L                                  mg/L'))) +
     facet_grid(gas + l1 + ln + l2~., scales = "free_y",
                labeller = label_bquote(rows = .(l1)[.(ln)]~.(l2))) +
-    ggtitle('a) Gas Concentrations') +
+    ggtitle('Gas Concentrations') +
     theme_bw() +
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
            axis.title = element_text(size = 10))
-ggarrange(cc, ff, ncol = 2, align = 'h')
+ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('A', 'B'))
 dev.off()
 
 
@@ -158,35 +158,52 @@ flux %>%
   geom_boxplot(fill = 'gray70', position = 'identity') +
   theme_bw()
 
+png('figures/CO2flux_equivalents.png')
+    flux %>%
+        mutate(flux.equivs = case_when(gas == 'CO2' ~ flux_mgm2d,
+                                       gas == 'N2O' ~ flux_mgm2d *298,
+                                       gas == 'CH4' ~ flux_mgm2d * 25,
+                                       TRUE ~ flux_mgm2d)) %>%
+        filter(gas != 'O2') %>%
+        group_by(group, gas) %>%
+        summarize(CO2_flux_equivalents = median(flux.equivs)) %>%
+        ggplot(aes(group, y = CO2_flux_equivalents, fill = gas)) +
+        geom_bar(stat = 'identity') +
+        scale_fill_brewer(type = 'qual', palette = 7) +
+        theme_minimal() +
+        xlab('')+
+        geom_hline(yintercept = 0, size = .7)
+dev.off()
+
 png("figures/ghgconc_longitudinal_boxplots.png", height = 5, width = 3.2,
     units = "in", res = 300)
-no <- flux %>%
-  group_by(group) %>%
-  summarize(no3_med = median(no3n_mgl, na.rm = T))%>%
-  ggplot(aes(x = group, no3_med))+
-  geom_line() +
-  # summarize(no3_h = quantile(no3n_mgl, 0.75, na.rm = T),
-  #           no3_l = quantile(no3n_mgl, 0.25, na.rm = T))%>%
-  # ggplot(aes(x = group, no3_h))+
-  # geom_ribbon(aes(ymin = no3_l, ymax = no3_h), fill = 'grey') +
-  # ggplot(aes(x = group, no3n_mgl, group = factor(group)))+
-  geom_point(data = flux, aes(group, no3n_mgl)) +
-  ylab("NO3-N (mg/L)")+
-  xlab('')+
-  # geom_violin(fill = 'gray70', position = 'identity') +
-  theme_bw()
-nn <- flux %>%
-  filter(gas == 'N2O')%>%
-   # mutate(flux_mgm2d =
-   #          ifelse(gas %in% c('CH4', 'N2O'), flux_mgm2d,
-   #                 flux_mgm2d/1000)) %>%
-  ggplot( aes(x = group, y = flux_mgm2d, group = factor(group)))+
-    geom_boxplot(fill = 'gray70', position = 'identity') +
-    xlab("Date")+
-    geom_hline(yintercept = 0, lwd = .5) +
-    ylab('N2O flux (mg/m2/d)') +
-    theme_bw()
-ggarrange(no, nn, ncol = 1, heights = c(.5, 1))
+    no <- flux %>%
+      group_by(group) %>%
+      summarize(no3_med = median(no3n_mgl, na.rm = T))%>%
+      ggplot(aes(x = group, no3_med))+
+      geom_line() +
+      # summarize(no3_h = quantile(no3n_mgl, 0.75, na.rm = T),
+      #           no3_l = quantile(no3n_mgl, 0.25, na.rm = T))%>%
+      # ggplot(aes(x = group, no3_h))+
+      # geom_ribbon(aes(ymin = no3_l, ymax = no3_h), fill = 'grey') +
+      # ggplot(aes(x = group, no3n_mgl, group = factor(group)))+
+      geom_point(data = flux, aes(group, no3n_mgl)) +
+      ylab("NO3-N (mg/L)")+
+      xlab('')+
+      # geom_violin(fill = 'gray70', position = 'identity') +
+      theme_bw()
+    nn <- flux %>%
+      filter(gas == 'N2O')%>%
+       # mutate(flux_mgm2d =
+       #          ifelse(gas %in% c('CH4', 'N2O'), flux_mgm2d,
+       #                 flux_mgm2d/1000)) %>%
+      ggplot( aes(x = group, y = flux_mgm2d, group = factor(group)))+
+        geom_boxplot(fill = 'gray70', position = 'identity') +
+        xlab("Date")+
+        geom_hline(yintercept = 0, lwd = .5) +
+        ylab('N2O flux (mg/m2/d)') +
+        theme_bw()
+    ggarrange(no, nn, ncol = 1, heights = c(.5, 1))
 dev.off()
 
 flux %>%
