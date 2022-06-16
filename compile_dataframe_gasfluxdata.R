@@ -63,7 +63,8 @@ sites <- site_dat[1:6, 1, drop = T]
 # Q <- read_csv('../nhc_50yl/data/rating_curves/interpolatedQ_allsites_long.csv') %>%
 #     dplyr::select(DateTime_UTC, site, discharge_complete = discharge, notes_rc)
 #
-# raw <- left_join(raw, Q, by = c('DateTime_UTC', 'site'))
+# raw <- left_join(raw, Q, by = c('DateTime_UTC', 'site'))%>%
+# filter(DateTime_UTC > ymd_hms('2019-11-01 00:00:00'))
 #
 # ggplot(raw, aes(DateTime_UTC, log(discharge_complete))) +
 #     geom_line(col = 'grey') +

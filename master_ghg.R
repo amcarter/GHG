@@ -23,8 +23,14 @@ setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/')
 # Calculate numbers for the results section:
   source('src/calc_numbers_for_results.R')
 
+# Plot the fraction of CO2 from instream production:
+  source('src/plots/plot_CO2_NEP_fraction.R')
+
+# Plot the correlation between variables:
+  source('src/plots/plot_correlation.R')
+
 # Mass balance in each reach along the continuum
-  source('src/ghg_mass_balance.R')
+  # source('src/ghg_mass_balance.R')
 
 
 

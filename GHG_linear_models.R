@@ -283,7 +283,7 @@ mods <- list(CH4.conc = out_ch4$m1,
              N2O.conc = out_N2O$m1,
              N2O.flux = out_N2Of$m1)
 
-saveRDS(mods, 'data/linear_models/best_lmes.csv')
+saveRDS(mods, 'data/linear_models/best_lmes.rds')
 
 summary(out_ch4$m1)
 
