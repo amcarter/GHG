@@ -33,7 +33,7 @@ write.csv(res1, 'data/corsignificance.csv')
 
 pal1<-colorRampPalette(c('coral2', 'white', 'steelblue'))
 
-png('figures/correlationplot.png', width = 4, height = 4,
+tiff('figures/final/correlationplot.tif', width = 4, height = 4,
     res = 300, units = 'in')
     par(oma = c(.5,0,0,0))
     corrplot(d, type = "lower", order = "original", p.mat = d1$p,
@@ -46,7 +46,7 @@ png('figures/correlationplot.png', width = 4, height = 4,
 
 dev.off()
 
-tiff('figures/correlationplot_2panel.tif', width=12, height=6,
+tiff('figures/final/correlationplot_2panel.tif', width=12, height=6,
      res=390, units='in')
     par(mfrow = c(1,2))
     corrplot(res, type = "lower", order = "original", p.mat = res1$p,

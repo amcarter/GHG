@@ -109,7 +109,7 @@ labframe <- data.frame(gas = c('CO2', 'CH4', 'N2O', 'O2'),
          l2 = c('', '', 'O', '')) %>%
     mutate(gas = factor(gas, levels = c('CO2', 'O2', 'CH4', 'N2O')))
 
-png("figures/ghgboxplots_longitudinal_boxplots.png", height = 4, width = 6.2,
+tiff("figures/final/ghgboxplots_longitudinal_boxplots.tiff", height = 4, width = 6.2,
     units = "in", res = 300)
 ff <- flux %>%
    mutate(flux_mgm2d =
@@ -148,7 +148,7 @@ cc <- flux %>%
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
            axis.title = element_text(size = 10))
-ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('A', 'B'))
+ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('a', 'b'))
 dev.off()
 
 
@@ -158,7 +158,7 @@ flux %>%
   geom_boxplot(fill = 'gray70', position = 'identity') +
   theme_bw()
 
-png('figures/CO2flux_equivalents.png')
+tiff('figures/final/CO2flux_equivalents.tif')
     flux %>%
         mutate(flux.equivs = case_when(gas == 'CO2' ~ flux_mgm2d,
                                        gas == 'N2O' ~ flux_mgm2d *298,
@@ -175,7 +175,7 @@ png('figures/CO2flux_equivalents.png')
         geom_hline(yintercept = 0, size = .7)
 dev.off()
 
-png("figures/ghgconc_longitudinal_boxplots.png", height = 5, width = 3.2,
+tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,
     units = "in", res = 300)
     no <- flux %>%
       group_by(group) %>%
@@ -188,8 +188,8 @@ png("figures/ghgconc_longitudinal_boxplots.png", height = 5, width = 3.2,
       # geom_ribbon(aes(ymin = no3_l, ymax = no3_h), fill = 'grey') +
       # ggplot(aes(x = group, no3n_mgl, group = factor(group)))+
       geom_point(data = flux, aes(group, no3n_mgl)) +
-      ylab("NO3-N (mg/L)")+
-      xlab('')+
+      labs(y = expression(paste(NO[3], '-N (mg/L)')),
+           x = '', size = 9.5)+
       # geom_violin(fill = 'gray70', position = 'identity') +
       theme_bw()
     nn <- flux %>%
@@ -199,11 +199,12 @@ png("figures/ghgconc_longitudinal_boxplots.png", height = 5, width = 3.2,
        #                 flux_mgm2d/1000)) %>%
       ggplot( aes(x = group, y = flux_mgm2d, group = factor(group)))+
         geom_boxplot(fill = 'gray70', position = 'identity') +
-        xlab("Date")+
         geom_hline(yintercept = 0, lwd = .5) +
-        ylab('N2O flux (mg/m2/d)') +
+        labs(x="Date",
+               y = expression(paste(N[2],'O flux (mg/', m^2, '/d)')),
+             size = 9.5) +
         theme_bw()
-    ggarrange(no, nn, ncol = 1, heights = c(.5, 1))
+    ggarrange(no, nn, ncol = 1, heights = c(.5, 1), labels = c('a', 'b'))
 dev.off()
 
 flux %>%
@@ -350,10 +351,11 @@ png('figures/figure3_timeseries_gas_conc_drivers_small.png', width = 3.5,
     axis(2, at = c(0.1, 1, 10, 100), labels = c(0.1, 1, 10, 100), cex.axis = 0.8)
 dev.off()
 
+pg <- arrange(pg, date)
  # Version two of this figure, where the upstream and downstream temperature
  # and discharge are plotted separately
  # update this after the above one is super finzlized
-png('figures/figure3_timeseries_gas_conc_drivers_small_v2.png', width = 3.5,
+tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3.5,
     height = 4.9, res = 300, units = 'in', family = 'cairo')
     m <- matrix(c(1,1,2,3,4,5,6,7), ncol = 1)
     layout(m)

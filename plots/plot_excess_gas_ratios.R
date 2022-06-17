@@ -64,7 +64,7 @@ ggplot(aes((wrt_days), (turnover_days), col  = site)) +
   geom_abline(slope = 1, intercept = 0)
 
 # Figure 5 excess CO2CH4 ####
-png('figures/excess_O2_CH4_CO2_plot.png', width = 8, height = 4, units = 'in',
+tiff('figures/final/excess_O2_CH4_CO2_plot.tif', width = 8, height = 4, units = 'in',
     family = 'cairo', res = 300)
   CH <- ggplot(ghg_nhc, aes(del_CO2, del_CH4, color =log10(discharge))) +
     geom_smooth(method = lm, se = F, col = '#999999')+
@@ -101,7 +101,7 @@ png('figures/excess_O2_CH4_CO2_plot.png', width = 8, height = 4, units = 'in',
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
 
-  ggarrange( DO,CH, ncol = 2, labels = c('A', 'B'))
+  ggarrange( DO,CH, ncol = 2, labels = c('a', 'b'))
 
 dev.off()
 
@@ -140,7 +140,6 @@ exp2 <- ghg_nhc %>%
          site = factor(site, levels = c('UNHC', 'WBP','WB','CBP','PM','NHC')))
 ggplot(exp2, aes(CH4.ugL, CH4.ugL/16/(extra_CO2), col = date)) +
   geom_point(size = 2) #+ geom_smooth(se = F)
-  geom_point(aes(y = del_CH4/extra_CO2), col = 'black') + geom_smooth(col = 'black')
 
 summary(lm(del_CH4 ~ extra_CO2, data = exp))
 summary(aov(K600 ~ site, data = exp))
@@ -187,7 +186,6 @@ ggplot(exp, aes(DO.obs, del_CH4/del_CO2)) +
   theme_bw()
 
 summary(lm(del_O2~NEP, data = exp))
-points(exp$del_CO2, exp$del_O2, col = 1, pch = 19)
 
 
 # CO2 from instream production ####

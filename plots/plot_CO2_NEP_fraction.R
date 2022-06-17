@@ -239,13 +239,13 @@ bars <- dp %>%
           panel.grid.minor = element_blank())
 # dev.off()
 
-png('figures/CO2_flux_from_NEP_combined.png', width = 6.5, height = 3,
+tiff('figures/final/CO2_flux_from_NEP_combined.tif', width = 6.5, height = 3,
     res = 300, units = 'in')
-    ggarrange(viols, bars_var, labels = c('A', 'B'), align = 'h',
+    ggarrange(viols, bars_var, labels = c('a', 'b'), align = 'h',
               legend = 'top', common.legend = TRUE, widths = c(1,1.3))
 dev.off()
-png('figures/CO2_flux_from_NEP_combined_1d.png', width = 6.5, height = 3,
+tiff('figures/final/CO2_flux_from_NEP_combined_1d.tif', width = 6.5, height = 3,
     res = 300, units = 'in')
-    ggarrange(viols_1d, bars, labels = c('A', 'B'), align = 'h',
+    ggarrange(viols_1d, bars, labels = c('a', 'b'), align = 'h',
               legend = 'top', common.legend = TRUE, widths = c(1,1.3))
 dev.off()
