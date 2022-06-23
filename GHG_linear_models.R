@@ -77,7 +77,7 @@ preds <- scaled %>%
   dplyr::select(site, sample, logQ, watertemp_C, GPP, ER, slope_mm, DO.obs,
          log_no3n, log_doc, depth)
 
-pred_cov <- data.frame(cov(preds))
+pred_cov <- data.frame(cov(preds[,3:11]))
 write_csv(pred_cov, 'data/linear_models/predictor_covariance_matrix.csv')
 
 # correlated predictors(r > 0.5)
@@ -276,6 +276,8 @@ best_lmes <- bind_rows(best_lmes, out_CO2f$mods)
 # out_O2f <- search_lmer(scaled$O2.flux_mgm2d, preds, 'O2', 'flux')
 # best_lmes <- bind_rows(best_lmes, out_O2f$mods)
 write_csv(best_lmes, 'data/linear_models/best_lme_summaries.csv')
+write_csv(best_lmes, 'data/linear_models/best_lme_summaries_K600.csv')
+write_csv(best_lmes, 'data/linear_models/best_lme_summaries_loggas.csv')
 mods <- list(CH4.conc = out_ch4$m1,
              CH4.flux = out_ch4f$m1,
              CO2.conc = out_CO2$m1,

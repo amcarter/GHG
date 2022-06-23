@@ -173,9 +173,21 @@ qq <- select(qq, -NHCQ)
 
 K600 <- readRDS("data/site_data/met_preds_stream_metabolizer_O2.rds")$preds %>%
     filter(era == 'now') %>%
-    select(site, date, discharge, starts_with('K600')) %>%
+    select(site, date, discharge, K600_inst = K600) %>%
     distinct()
-qq <- bind_rows(K600, qq) %>%
+
+# calculate the expected K600 based on discharge
+K_calc <- data.frame()
+for(s in unique(K600$site)){
+    K_sub <- filter(K600, site == s)
+    K_sub$logQ <- log(K_sub$discharge)
+    l <- loess(K600_inst ~ logQ, data = K_sub)
+    K_sub$K600 <- predict(l, K_sub)
+    K_sub <- select(K_sub, -logQ)
+    K_calc <- bind_rows(K_calc, K_sub)
+}
+
+qq <- bind_rows(K_calc, qq) %>%
     group_by(site, date) %>%
     summarize_all(mean, na.rm = T) %>%
     ungroup() %>%
@@ -233,9 +245,8 @@ colnames(qq) <- c('site', 'date', paste0(colnames(qq)[3:6], '.2'))
 dat_ghg <- dat_ghg %>%
     left_join(qq, by = c('site', 'date')) %>%
     mutate(discharge = ifelse(!is.na(discharge), discharge, discharge.2),
-         K600 = ifelse(!is.na(K600), K600, K600.2),
-         K600_2.5 = ifelse(!is.na(K600_2.5), K600_2.5, K600_2.5.2),
-         K600_97.5 = ifelse(!is.na(K600_97.5), K600_97.5, K600_97.5.2)) %>%
+         K600_inst = ifelse(!is.na(K600_inst), K600_inst, K600_inst.2)) %>%
+    rename(K600 = K600.2) %>%
     select(-ends_with('.2'))
 
 dat_ghg<- dat_ghg %>%
@@ -271,6 +282,8 @@ dat_ghg_predictors <- SP_wchem %>%
     full_join(raw_daily, by = c('site', 'date')) %>%
     left_join(site_dat, by = 'site') %>%
     left_join(slope[,c(1,5)], by = 'site') %>%
+    left_join(qq[,c(1,2,5)], by = c('site', 'date')) %>%
+    rename(K600 = K600.2) %>%
     filter(date <= date_rng[2], date >= date_rng[1]) %>%
     arrange(date, distance_upstream_m) %>%
     select(-notes_rc)
