@@ -122,8 +122,9 @@ ff <- flux %>%
     scale_x_discrete(limits = rev(levels(flux$site)),
                      labels = c(0, 2330, 2500, 5000, 6880, 8450))+
     labs(x = "Sites, distance downstream (m)",
-         y = expression(paste('mg/', m^2,
-                              '/d                            g/', m^2, '/d')))+
+         y = expression(paste('mg ', m^-2, ' ', d^-1,
+                              '                            g ',
+                              m^-2, ' ', d^-1)))+
     facet_grid(gas + l1 + ln + l2~., scales = "free_y",
                labeller = label_bquote(rows = .(l1)[.(ln)]~.(l2))) +
     ggtitle('Gas Flux Rates') +
@@ -140,7 +141,8 @@ cc <- flux %>%
     geom_boxplot(fill = 'gray70', position = 'identity') +
     scale_x_discrete(limits = rev(levels(flux$site)), labels = c(0, 2330, 2500, 5000, 6880, 8450))+
     labs(x = "Sites, distance downstream (m)",
-         y = expression(paste(mu, 'g/L                                  mg/L'))) +
+         y = expression(paste(mu, 'g ', L^-1,
+                              '                                  mg ', L^-1))) +
     facet_grid(gas + l1 + ln + l2~., scales = "free_y",
                labeller = label_bquote(rows = .(l1)[.(ln)]~.(l2))) +
     ggtitle('Gas Concentrations') +
@@ -148,7 +150,8 @@ cc <- flux %>%
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
            axis.title = element_text(size = 10))
-ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('a', 'b'))
+ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('a', 'b'),
+          label.x = 0.03, label.y = 1.02)
 dev.off()
 
 
@@ -172,6 +175,7 @@ tiff('figures/final/CO2flux_equivalents.tif')
         scale_fill_brewer(type = 'qual', palette = 7) +
         theme_minimal() +
         xlab('')+
+        ylab(expression(paste(CO[2], ' flux equivalents')))+
         geom_hline(yintercept = 0, size = .7)
 dev.off()
 
@@ -188,7 +192,7 @@ tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,
       # geom_ribbon(aes(ymin = no3_l, ymax = no3_h), fill = 'grey') +
       # ggplot(aes(x = group, no3n_mgl, group = factor(group)))+
       geom_point(data = flux, aes(group, no3n_mgl)) +
-      labs(y = expression(paste(NO[3], '-N (mg/L)')),
+      labs(y = expression(paste(NO[3], '-N (mg ', L^-1, ')')),
            x = '', size = 9.5)+
       # geom_violin(fill = 'gray70', position = 'identity') +
       theme_bw()
@@ -201,10 +205,11 @@ tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,
         geom_boxplot(fill = 'gray70', position = 'identity') +
         geom_hline(yintercept = 0, lwd = .5) +
         labs(x="Date",
-               y = expression(paste(N[2],'O flux (mg/', m^2, '/d)')),
+               y = expression(paste(N[2],'O flux (mg ', m^-2, ' ', d^-1, ')')),
              size = 9.5) +
         theme_bw()
-    ggarrange(no, nn, ncol = 1, heights = c(.5, 1), labels = c('a', 'b'))
+    ggarrange(no, nn, ncol = 1, heights = c(.5, 1), labels = c('a', 'b'),
+              label.y = 1.05)
 dev.off()
 
 flux %>%
@@ -361,8 +366,7 @@ tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3
     layout(m)
     par(mar = c(.3,0,0,0), oma = c(4, 4.5, 1, 1))
     plot(pds$date, pds$GPP_mean, type = 'l', lwd = 2, col = 'grey35',
-         ylim = c(-8.5,3.5), cex.axis = 0.8,
-         ylab = "Metabolism g O2/m2/d", xaxt = 'n', xlab = '')
+         ylim = c(-8.5,3.5), cex.axis = 0.8, xaxt = 'n', xlab = '')
     lines(pds$date, -pds$ER_mean, lwd = 2, col = 'grey35')
     polygon(c(pds$date, rev(pds$date)),
             na.approx(rollmean(c(pds$GPP_c2.5, rev(pds$GPP_c97.5)), 3, na.pad = T),
@@ -374,7 +378,7 @@ tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3
             border = NA, col = alpha(col.ER, .4))
     abline(h = 0)
     mtext('Metabolism', 2,3.2,cex = 0.63)
-    mtext(expression(paste("(g"~O[2]~"/m"^"2"*"/y)")), 2, 2, cex = .63)
+    mtext(expression(paste("(g"~O[2]~m^-2~y^-1,")")), 2, 2, cex = .63)
     legend('bottomright', legend = c('GPP', 'ER'),cex = .8,
            col = 'grey35', inset = .065, lty = 1, bty = 'n',  lwd = 2)
     polygon(pds$date[c(103,114,114,103)], c(-5,-5,-6,-6),
@@ -386,28 +390,28 @@ tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3
     polygon(c(pg$date, rev(pg$date)), c(pg$CO2_ci25, rev(pg$CO2_ci75)),
             col = alpha('grey', .5), border = NA)
     mtext(expression(CO[2]), 2, 3.2, cex = .63)
-    mtext('(mg/l)', 2, 2, cex = .63)
+    mtext(expression(paste('(mg'~L^-1,')')), 2, 2, cex = .63)
     plot(pg$date, pg$DO, pch = 20, xaxt = 'n', xlab = '', ylab = '',
          ylim = c(6,13), yaxt = 'n', cex.axis = 0.8)
     polygon(c(pg$date, rev(pg$date)), c(pg$DO_ci25, rev(pg$DO_ci75)),
             col = alpha('grey', .5), border = NA)
     axis(2, at = c(7,9,11), cex.axis = 0.8)
     mtext(expression(O[2]), 2, 3.2, cex = .63)
-    mtext('(mg/l)', 2, 2, cex = .63)
+    mtext(expression(paste('(mg'~L^-1,')')), 2, 2, cex = .63)
     plot(pg$date, pg$CH4, pch = 20, xaxt = 'n', xlab = '', ylab = '',
          ylim = c(-1, 22), yaxt = 'n', cex.axis = 0.8)
     polygon(c(pg$date, rev(pg$date)), c(pg$CH4_ci25, rev(pg$CH4_ci75)),
             col = alpha('grey', .5), border = NA)
     axis(2, at = c(0,10,20), cex.axis = 0.8)
     mtext(expression(CH[4]), 2, 3.2, cex = .63)
-    mtext(expression(paste('('*mu*'g/l)')), 2,2, cex = .63)
+    mtext(expression(paste('('*mu*'g'~L^-1,')')), 2,2, cex = .63)
     plot(pg$date, pg$N2O, pch = 20, xaxt = 'n', xlab = '', ylab = '',
          ylim = c(-.1, .93), yaxt = 'n', cex.axis = 0.8)
     polygon(c(pg$date, rev(pg$date)), c(pg$N2O_ci25, rev(pg$N2O_ci75)),
             col = alpha('grey', .5), border = NA)
     axis(2, at = c(0, 0.4, 0.8), cex.axis = 0.8)
     mtext(expression(paste(N[2]*'O')), 2, 3.2, cex = .63)
-    mtext(expression(paste('('*mu*'g/l)')), 2,2, cex = .63)
+    mtext(expression(paste('('*mu*'g'~L^-1,')')), 2,2, cex = .63)
     plot(dvs[dvs$site == "UNHC",]$date, dvs[dvs$site == 'UNHC',]$watertemp_C,
          type = 'l', lwd = 1.2, col = 'grey 10',
          xaxt = 'n', xlab = '', ylab = '', cex.axis = 0.8)
@@ -425,7 +429,7 @@ tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3
     lines(dvs[dvs$site == "NHC",]$date, dvs[dvs$site == 'NHC', ]$discharge,
          lwd = 1.2, col = 'grey 10', lty = 2)
     mtext("Discharge", 2, 3.2, cex = .63)
-    mtext(expression(paste("(m"^"3"*"/s)")), 2,2, cex = .63)
+    mtext(expression(paste("(m"^"3"~s^-1,")")), 2,2, cex = .63)
     axis(1, at = seq(as.Date('2019-12-01'), by = 'month', length.out = 4),
          labels = c('Dec-2019', 'Jan-2020', 'Feb-2020', 'Mar-2020'), cex.axis = 0.8)
     axis(2, at = c(0.1, 1, 100), labels = c(0.1, 1, 100), cex.axis = 0.8)

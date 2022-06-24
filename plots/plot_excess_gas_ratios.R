@@ -70,12 +70,12 @@ tiff('figures/final/excess_O2_CH4_CO2_plot.tif', width = 8, height = 4, units = 
     geom_smooth(method = lm, se = F, col = '#999999')+
     geom_point(size = 2) +
     scale_color_gradientn(colors = plasma(8)[1:7],
-                          name = expression(Discharge (m^3/s)),
+                          name = expression(Discharge (m^3~s^-1)),
                           na.value = "grey80",
                           breaks = c(-0.69897,-.1549, .39794),
                           labels = c(0.2,0.7,2.5)) +
-    labs(x = expression(paste(CO[2], " departure (", mu, "mol/L)")),
-         y = expression(paste(CH[4], " departure (", mu, "mol/L)"))) +
+    labs(x = expression(paste(CO[2], " departure (", mu, "mol"~L^-1,")")),
+         y = expression(paste(CH[4], " departure (", mu, "mol"~L^-1,")"))) +
     theme_bw()+
     theme(legend.key.size = unit(0.6,'cm'),
           legend.title = element_text(size = 10),
@@ -89,19 +89,20 @@ tiff('figures/final/excess_O2_CH4_CO2_plot.tif', width = 8, height = 4, units = 
     geom_point(size = 2) +
     geom_abline(slope = -1.25, intercept = 0, lty = 2, lwd = .5) +
     scale_color_gradientn(colors = c(plasma(7)[c(4:6)],'forestgreen'),
-                          name = expression(NEP (gO[2]/m^2/d)),
+                          name = expression(NEP (gO[2]~m^-2~d^-1)),
                           na.value = "grey80")+#plasma(6)[1:5]) +
-    labs(x = expression(paste(CO[2], " departure (", mu, "mol/L)")),
-         y = expression(paste(O[2], " departure (", mu, "mol/L)"))) +
+    labs(x = expression(paste(CO[2], " departure (", mu, "mol"~L^-1,")")),
+         y = expression(paste(O[2], " departure (", mu, "mol"~L^-1,")"))) +
     theme_bw()+
     theme(legend.key.size = unit(0.6,'cm'),
           legend.title = element_text(size = 10),
-          legend.position = c(.62, .9),
+          legend.position = c(.61, .9),
           legend.direction = 'horizontal',
           panel.grid.major = element_blank(),
           panel.grid.minor = element_blank())
 
-  ggarrange( DO,CH, ncol = 2, labels = c('a', 'b'))
+  ggarrange( DO,CH, ncol = 2, labels = c('a', 'b'),
+             label.x = 0.02, label.y = 0.99)
 
 dev.off()
 

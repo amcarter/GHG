@@ -60,16 +60,8 @@ sites <- site_dat[1:6, 1, drop = T]
 #   dat$site <- site
 #   raw = bind_rows(raw, dat)
 # }
-# Q <- read_csv('../nhc_50yl/data/rating_curves/interpolatedQ_allsites_long.csv') %>%
-#     dplyr::select(DateTime_UTC, site, discharge_complete = discharge, notes_rc)
 #
-# raw <- left_join(raw, Q, by = c('DateTime_UTC', 'site'))%>%
-# filter(DateTime_UTC > ymd_hms('2019-11-01 00:00:00'))
-#
-# ggplot(raw, aes(DateTime_UTC, log(discharge_complete))) +
-#     geom_line(col = 'grey') +
-#     geom_line(aes(y = log(discharge))) +
-#     facet_wrap(.~site, scales = 'free')
+# raw <- filter(raw, DateTime_UTC > ymd_hms('2019-11-01 00:00:00'))
 #
 # write_csv(raw, 'data/site_data/metabolism.csv')
 raw <- read_csv('data/site_data/metabolism.csv')
@@ -82,9 +74,9 @@ raw_dat <- raw %>%
                               spc_uScm <0.01 ~ NA_real_,
                               TRUE ~ spc_uScm)) %>%
   select(datetime, site, level_m, depth, site, spc_uScm, DO.obs, DO.sat,
-         watertemp_C = temp.water, discharge = discharge_complete, notes_rc) %>%
+         watertemp_C = temp.water, discharge) %>%
   group_by(site) %>%
-  mutate(across(.cols = -all_of(c('datetime', 'notes_rc')),
+  mutate(across(.cols = -all_of(c('datetime')),
                 ~na.approx(., na.rm = F, x = datetime))) %>%
   ungroup()
 
@@ -151,55 +143,58 @@ raw_daily <- raw_dat %>%
   ungroup() %>%
   select(-level_m)
 
-qq <- left_join(ghg, raw_daily, by = c('site', 'date')) %>%
-    select(site, date, discharge) %>%
-    group_by(date, site) %>%
-    summarize(discharge = mean(discharge, na.rm = T)) %>%
-    ungroup() %>%
-    pivot_wider(names_from = site, values_from = discharge) %>%
-    mutate(NHCQ = NHC) %>%
-    pivot_longer(c(-date, -NHCQ), names_to = "site", values_to = "discharge")
-Q <- raw_daily %>%
-    select(site, date, discharge) %>%
-    pivot_wider(names_from = site, values_from = discharge)
-
-for(ss in c('CBP', 'UNHC', 'PM')){
-  m <- summary(lm(log(Q[,ss, drop = T])~log(Q$NHC)))$coefficients
-  qq <- qq %>%
-    mutate(discharge = case_when(!is.na(discharge) ~ discharge,
-                                 site == ss ~ exp(m[1,1]) * NHCQ ^ m[2,1]))
-}
-qq <- select(qq, -NHCQ)
+# qq <- left_join(ghg, raw_daily, by = c('site', 'date')) %>%
+#     select(site, date, discharge) %>%
+#     group_by(date, site) %>%
+#     summarize(discharge = mean(discharge, na.rm = T)) %>%
+#     ungroup() %>%
+#     pivot_wider(names_from = site, values_from = discharge) %>%
+#     mutate(NHCQ = NHC) %>%
+#     pivot_longer(c(-date, -NHCQ), names_to = "site", values_to = "discharge")
+# Q <- raw_daily %>%
+#     select(site, date, discharge) %>%
+#     pivot_wider(names_from = site, values_from = discharge)
+#
+# for(ss in c('CBP', 'UNHC', 'PM')){
+#   m <- summary(lm(log(Q[,ss, drop = T])~log(Q$NHC)))$coefficients
+#   qq <- qq %>%
+#     mutate(discharge = case_when(!is.na(discharge) ~ discharge,
+#                                  site == ss ~ exp(m[1,1]) * NHCQ ^ m[2,1]))
+# }
+# qq <- select(qq, -NHCQ)
 
 K600 <- readRDS("data/site_data/met_preds_stream_metabolizer_O2.rds")$preds %>%
     filter(era == 'now') %>%
-    select(site, date, discharge, K600_inst = K600) %>%
+    select(site, date, year, discharge, K600_inst = K600) %>%
     distinct()
 
 # calculate the expected K600 based on discharge
 K_calc <- data.frame()
 for(s in unique(K600$site)){
     K_sub <- filter(K600, site == s)
-    K_sub$logQ <- log(K_sub$discharge)
-    l <- loess(K600_inst ~ logQ, data = K_sub)
-    K_sub$K600 <- predict(l, K_sub)
-    K_sub <- select(K_sub, -logQ)
-    K_calc <- bind_rows(K_calc, K_sub)
+    for(y in unique(K_sub$year)){
+        K_s <- filter(K_sub, year == y)
+        K_s$logQ <- log(K_s$discharge)
+        l <- loess(K600_inst ~ logQ, data = K_s)
+        K_s$K600 <- predict(l, K_s)
+        K_s <- select(K_s, -logQ)
+        K_calc <- bind_rows(K_calc, K_s)
+    }
 }
 
-qq <- bind_rows(K_calc, qq) %>%
-    group_by(site, date) %>%
-    summarize_all(mean, na.rm = T) %>%
-    ungroup() %>%
-    group_by(site) %>%
-    mutate(across(starts_with('K'), ~ na.approx(., na.rm = F, x = discharge))) %>%
-    ungroup()
+# qq <- bind_rows(K_calc, qq) %>%
+#     group_by(site, date) %>%
+#     summarize_all(mean, na.rm = T) %>%
+#     ungroup() %>%
+#     group_by(site) %>%
+#     mutate(across(starts_with('K'), ~ na.approx(., na.rm = F, x = discharge))) %>%
+#     ungroup()
 
 met <- readRDS("data/site_data/met_preds_stream_metabolizer_O2.rds")$filled %>%
   filter(year > 2000) %>% distinct() %>%
   select(site, date, starts_with(c("GPP", "ER"), ignore.case = FALSE)) %>%
   select(-ends_with('cum')) %>%
-  left_join(K600[,-3], by = c('site', 'date')) %>%
+  left_join(K_calc[,-c(3:4)], by = c('site', 'date')) %>%
   group_by(site) %>%
   mutate(across(-date, ~zoo::na.approx(., na.rm = F, x =  date))) %>%
   ungroup()
@@ -240,22 +235,21 @@ dat_ghg <- dat_inst %>%
     arrange(date, distance_upstream_m) %>%
     mutate(sample = paste(site, group, sep = '_'))
 
-colnames(qq) <- c('site', 'date', paste0(colnames(qq)[3:6], '.2'))
-
-dat_ghg <- dat_ghg %>%
-    left_join(qq, by = c('site', 'date')) %>%
-    mutate(discharge = ifelse(!is.na(discharge), discharge, discharge.2),
-         K600_inst = ifelse(!is.na(K600_inst), K600_inst, K600_inst.2)) %>%
-    rename(K600 = K600.2) %>%
-    select(-ends_with('.2'))
+# colnames(qq) <- c('site', 'date', paste0(colnames(qq)[3:6], '.2'))
+#
+# dat_ghg <- dat_ghg %>%
+#     left_join(qq, by = c('site', 'date')) %>%
+#     mutate(discharge = ifelse(!is.na(discharge), discharge, discharge.2),
+#          K600_inst = ifelse(!is.na(K600_inst), K600_inst, K600_inst.2)) %>%
+#     rename(K600 = K600.2) %>%
+#     select(-ends_with('.2'))
 
 dat_ghg<- dat_ghg %>%
     mutate(DO.obs = ifelse(!is.na(DO.obs), DO.obs, DO.obs.inst),
            DO.sat = ifelse(!is.na(DO.sat), DO.sat, DO.sat.inst),
            spc_uScm = ifelse(!is.na(spc_uScm), spc_uScm, spc_uScm.inst),
            watertemp_C = ifelse(!is.na(watertemp_C), watertemp_C,
-                              watertemp_C.inst)) %>%
-    select(-notes_rc)
+                              watertemp_C.inst))
 
 # load slopes from whitebox
 # slope <- read_csv('data/sites_whitebox_slopes.csv') %>%
@@ -282,11 +276,10 @@ dat_ghg_predictors <- SP_wchem %>%
     full_join(raw_daily, by = c('site', 'date')) %>%
     left_join(site_dat, by = 'site') %>%
     left_join(slope[,c(1,5)], by = 'site') %>%
-    left_join(qq[,c(1,2,5)], by = c('site', 'date')) %>%
-    rename(K600 = K600.2) %>%
+    # left_join(qq[,c(1,2,5)], by = c('site', 'date')) %>%
+    # rename(K600 = K600.2) %>%
     filter(date <= date_rng[2], date >= date_rng[1]) %>%
-    arrange(date, distance_upstream_m) %>%
-    select(-notes_rc)
+    arrange(date, distance_upstream_m)
 
 write_csv(dat_ghg, 'data/ghg_complete_drivers_dataframe_individual_samples.csv')
 write_csv(dat_ghg_predictors, 'data/ghg_filled_drivers_dataframe.csv')

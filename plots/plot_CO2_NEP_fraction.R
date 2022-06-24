@@ -10,7 +10,7 @@ dat <- read_csv('data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv')
     mutate(distance_m = 8450 - distance_upstream_m,
            distance_m = factor(distance_m))
 dvs <- read_csv("data/ghg_filled_drivers_dataframe.csv") %>%
-    filter(site == 'UNHC')
+    filter(site == 'NHC')
            # date >= min(unique(dat$group)),
            # date <= max(unique(dat$group)))
 
@@ -143,7 +143,7 @@ viols <- ggplot(dd, aes(distance_m, gm2d, fill = category) )+
                                  expression(paste(CO[2], ' from NEP')),
                                  'median'))+
     labs(x = 'Distance Downstream (m)',
-         y = expression(paste(CO[2], ' flux (g/', m^2, '/d)')))+
+         y = expression(paste(CO[2], ' flux (g'~m^-2~d^-1*')')))+
     theme_bw()+
     scale_x_discrete(expand = c(.18,0)) +
     theme(legend.position = 'top',
@@ -168,7 +168,7 @@ viols_1d <- ggplot(dd, aes(distance_m, gm2d, fill = category) )+
                                  expression(paste(CO[2], ' from NEP')),
                                  'median'))+
     labs(x = 'Distance Downstream (m)',
-         y = expression(paste(CO[2], ' flux (g/', m^2, '/d)')))+
+         y = expression(paste(CO[2], ' flux (g'~m^2~d^-1*')')))+
     theme_bw()+
     scale_x_discrete(expand = c(.18,0)) +
     theme(legend.position = 'top',
@@ -200,11 +200,12 @@ bars_var <- dpdevs %>%
     xlab('Sample Date')+
     guides(fill = F)+
     scale_fill_manual(values = c(col.xs, alpha(col.NER, .8)))+
-    scale_y_continuous(name = expression(paste(CO[2], ' flux (g/', m^2, '/d)')),
-                       sec.axis = sec_axis(trans = ~.*30,
-                                name = expression(paste('Discharge (', m^3, '/s)'))))+
+    scale_y_continuous(name = expression(paste(CO[2], ' flux (g'~m^2~d^-1*')')),
+                       sec.axis = sec_axis(trans = ~.*3,
+                                name = expression(paste('Discharge (',
+                                                        m^3~s^-1*')'))))+
     geom_line(data = dvs,
-              aes(x = date, y = ((discharge))/30, fill = NULL),
+              aes(x = date, y = ((discharge))/3, fill = NULL),
               size = .75, col = 'steelblue4')+
     theme_bw()+
     theme(plot.margin = unit(c(.1,.2,.2,.2), "cm"),
@@ -224,11 +225,12 @@ bars <- dp %>%
     xlab('Sample Date')+
     guides(fill = F)+
     scale_fill_manual(values = c(col.xs, alpha(col.NER, .8)))+
-    scale_y_continuous(name = expression(paste(CO[2], ' flux (g/', m^2, '/d)')),
-                       sec.axis = sec_axis(trans = ~.*30,
-                                name = expression(paste('Discharge (', m^3, '/s)'))))+
+    scale_y_continuous(name = expression(paste(CO[2], ' flux (g'~m^2~d^-1*')')),
+                       sec.axis = sec_axis(trans = ~.*3,
+                                name = expression(paste('Discharge (',
+                                                        m^3~s^-1*')'))))+
     geom_line(data = dvs,
-              aes(x = date, y = ((discharge))/30, fill = NULL),
+              aes(x = date, y = ((discharge))/3, fill = NULL),
               size = .75, col = 'steelblue4')+
     theme_bw()+
     theme(plot.margin = unit(c(.1,.2,.2,.2), "cm"),

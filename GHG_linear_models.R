@@ -71,7 +71,26 @@ scaled <- dat %>%
             log_no3n, log_doc, ends_with(c("ugld", "ugL", 'mgm2d'))) %>%
     mutate(across(-any_of(c('site', 'sample')), ~ scale(.)[,1, drop = T]),
          across(all_of(c('site', 'sample')), ~ factor(.)))
-
+# scaled <- dat %>%
+#     filter(site != 'MC751',
+#          !is.na(CH4.ugL),
+#          !is.na(GPP)) %>%
+#     mutate(logQ = log(discharge),
+#          NER = ER - GPP,
+#          DO.persat = DO.obs/DO.sat,
+#          # logWRT = log(1000*depth*width_march_m/discharge),
+#          no3n_mgl = ifelse(no3n_mgl == 0, 0.0015, no3n_mgl), # replace zero with mdl
+#          site = factor(site, levels=c('UNHC','WBP','WB','CBP','PM','NHC')),
+#          log_no3n = log(no3n_mgl),
+#          log_doc = log(doc_mgl),
+#          N2O.ugL = case_when(N2O.ugL == 0 ~ 0.015,
+#                              TRUE ~ N2O.ugL)) %>%
+#     mutate(across((ends_with('ugL')), ~log(.x)))%>%
+#     dplyr::select(site, sample, logQ, watertemp_C, ER, GPP, DO.obs, slope_mm, depth,
+#             log_no3n, log_doc, ends_with(c("ugld", "ugL", 'mgm2d'))) %>%
+#     mutate(across(-any_of(c('site', 'sample')), ~ scale(.)[,1, drop = T]),
+#          across(all_of(c('site', 'sample')), ~ factor(.)))
+#
 
 preds <- scaled %>%
   dplyr::select(site, sample, logQ, watertemp_C, GPP, ER, slope_mm, DO.obs,
@@ -276,8 +295,7 @@ best_lmes <- bind_rows(best_lmes, out_CO2f$mods)
 # out_O2f <- search_lmer(scaled$O2.flux_mgm2d, preds, 'O2', 'flux')
 # best_lmes <- bind_rows(best_lmes, out_O2f$mods)
 write_csv(best_lmes, 'data/linear_models/best_lme_summaries.csv')
-write_csv(best_lmes, 'data/linear_models/best_lme_summaries_K600.csv')
-write_csv(best_lmes, 'data/linear_models/best_lme_summaries_loggas.csv')
+
 mods <- list(CH4.conc = out_ch4$m1,
              CH4.flux = out_ch4f$m1,
              CO2.conc = out_CO2$m1,
@@ -287,24 +305,22 @@ mods <- list(CH4.conc = out_ch4$m1,
 
 saveRDS(mods, 'data/linear_models/best_lmes.rds')
 
-summary(out_ch4$m1)
+summary(out_CO2f$m1)
 
 #one thought was that GHG patterns by site were more stable than between sites
 #so should probably test the site as a fixed effect
+grouped <- scaled1 %>% group_by(site, sample) %>%
+    summarize(across(ends_with(c('ugL', 'mgm2d')), ~mean(.x, na.rm = T)))
+summary(aov(CO2.ugL ~ site, data = grouped))         # not significant
+summary(aov(CO2.flux_mgm2d ~ site, data = grouped))   # not significant
+summary(aov(CH4.ugL ~ site, data = grouped))         # *** p = 0.000758
+summary(aov(CH4.flux_mgm2d ~ site, data = grouped))   # not significant
+summary(aov(N2O.ugL ~ site, data = grouped))         # not significant
+summary(aov(N2O.flux_mgm2d ~ site, data = grouped))   # not significant
 
-summary(aov(CO2.ugL ~ site, data = scaled))         # not significant
-summary(aov(CO2.flux_mgm2d ~ site, data = scaled))   # not significant
-summary(aov(CH4.ugL ~ site, data = scaled))         # ** p = 0.00324
-summary(aov(CH4.flux_mgm2d ~ site, data = scaled))   # p = 0.0687
-summary(aov(N2O.ugL ~ site, data = scaled))         # not significant
-summary(aov(N2O.flux_mgm2d ~ site, data = scaled))   # * p = 0.0347
-summary(aov(DO.obs ~ site, data = scaled))          # not significant
-summary(aov(O2.flux_mgm2d ~ site, data = scaled))    # not significant
+summary(lm(CH4.ugL ~ site-1, data = grouped))
 
-summary(lm(CH4.ugL ~ site-1, data = scaled))
-summary(lm(CH4.flux_ugld ~ site-1, data = scaled))
-summary(lm(N2O.flux_ugld ~ site-1, data = scaled))
-
+# this method is no longer in use 6/2022
 # Use Leaps package to find the best models for each gas concentration and flux
 find_best_model <- function(preds, y, gas, flux = FALSE){
     if(gas != 'N2O') preds <- dplyr::select(preds, -log_no3n)
