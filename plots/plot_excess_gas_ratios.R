@@ -191,7 +191,9 @@ summary(lm(del_O2~NEP, data = exp))
 
 # CO2 from instream production ####
 tmp <- ghg_nhc %>%
-  mutate(CO2_flux = (CO2.flux_ugld * depth)/1000,
+    # select(site, group, GPP, ER, depth, CO2.flux_ugld,
+    #        ends_with('ugL'), del_O2) %>%
+    mutate(CO2_flux = (CO2.flux_ugld * depth)/1000,
          NEP_CO2 = ((ER - GPP)*44/32/1.25),
          # NEP = ifelse(NEP_CO2>0, NEP_CO2, 0),
          NEP_CO2_high = ((ER - GPP)*44/32 *1),

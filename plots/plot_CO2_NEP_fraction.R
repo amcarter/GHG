@@ -21,8 +21,35 @@ dat%>%
            pctNEP_filt = case_when(pctNEP < 0 ~ 0,
                                    pctNEP >1 ~1,
                                    TRUE ~pctNEP)) %>% #filter(pctNEP_filt == 0)
-    summarize(all = length(which(pctNEP_filt == 1)),
+    summary()
+dat%>%
+    select(site, group, CO2_flux, NEP_CO2, instr) %>%
+    mutate(pctNEP = NEP_CO2/CO2_flux,
+           pctNEP_filt = case_when(pctNEP < 0 ~ 0,
+                                   pctNEP >1 ~1,
+                                   TRUE ~pctNEP)) %>% #filter(pctNEP_filt == 0)
+    group_by(site) %>%# filter(CO2_flux >0) %>%
+    summarize(mean= mean(pctNEP_filt, na.rm = T),
+              median= median(pctNEP_filt, na.rm = T),
+              sd = sd(pctNEP_filt, na.rm = T),
+              min = min(pctNEP_filt, na.rm = T) ,
+              xs = max(pctNEP, na.rm = T),
+              all = length(which(pctNEP_filt == 1)),
               zero = length(which(pctNEP_filt == 0)))
+dat%>%
+    select(site, group, CO2_flux, NEP_CO2, instr) %>%
+    # filter(CO2_flux >0) %>%
+    mutate(pctNEP = NEP_CO2/CO2_flux,
+           pctNEP_filt = case_when(pctNEP < 0 ~ 0,
+                                   pctNEP >1 ~1,
+                                   TRUE ~pctNEP)) %>% #filter(pctNEP_filt == 0)
+    summarize(all = sum(!is.na(CO2_flux)),
+              one = length(which(pctNEP_filt == 1)),
+              zero = length(which(pctNEP_filt == 0)),
+              a = length(which(NEP_CO2<0 &CO2_flux >0)),
+              b = length(which(NEP_CO2>0 &CO2_flux <0)),
+              p_one = one/all,
+              p_zero = zero/all)
 dat%>%
     select(site, group, CO2_flux, NEP_CO2, instr) %>%
     mutate(pctNEP = NEP_CO2/CO2_flux,
@@ -39,7 +66,12 @@ dat%>%
               zero = length(which(pctNEP_filt == 0)))
     ggplot(aes(group, pctNEP_filt, col = site)) +
     geom_point()
-    summary()
+
+dat %>%
+    select(CO2_flux, NEP_CO2) %>%
+    filter(CO2_flux >0) %>%
+    mutate(NEP_CO2 = ifelse(NEP_CO2>0, NEP_CO2, 0)) %>%
+    summarize(across(everything(), sum))
 
 dat%>%
     group_by(group)%>%

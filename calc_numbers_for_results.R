@@ -132,19 +132,24 @@ dat %>%
 
 ins <- read_csv('data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv')
 ss <- ins %>%
-  select(site, date, CO2_flux, NEP, Extra, instr) %>%
+  select(site, date, CO2_flux, NEP, instr) %>%
   group_by(site) %>%
   select( -date)%>%
   summarize_all(.funs = list(mean = ~mean(., na.rm = T),
                 sd = ~sd(., na.rm = T)))
 
+summary(ins)
 summary(aov(instr ~CO2_flux, data = ins))
 
-filter(CO2_flux>0) %>%
-  mutate(instr = ifelse(instr>1, 1, instr)) %>%
-  summarize_all(sum, na.rm = T)
-  summary()
-<- dat %>%
+ins %>% select(site, date, CO2_flux, instr, NEP_CO2) %>%
+    # filter(CO2_flux>0) %>%
+    mutate(instr = ifelse(instr<0, 0, instr)) %>%
+    summary()
+ins %>% select(site, date, CO2_flux, instr, NEP_CO2) %>%
+    filter(CO2_flux<0) %>%
+    mutate(instr = ifelse(instr>0, 0, instr)) %>%
+    summary()
+
   filter(!is.na(datetime),
          site != "MC751") %>%
   # mutate(date = as.Date(group))%>%
