@@ -149,6 +149,18 @@ ins %>% select(site, date, CO2_flux, instr, NEP_CO2) %>%
     filter(CO2_flux<0) %>%
     mutate(instr = ifelse(instr>0, 0, instr)) %>%
     summary()
+ins %>% select(site, date, CO2_flux, instr, NEP_CO2) %>%
+    mutate(instr = case_when(instr < 0 ~ 0,
+                             instr > 1 ~ 1,
+                             TRUE ~ instr)) %>%
+    group_by(date) %>%
+    summarize(mean = mean(instr, na.rm = T),
+              median = median(instr, na.rm = T),
+              sd = sd(instr, na.rm=T))
+ins %>% filter(CO2_flux > 0) %>%
+    select(site, date, CO2_flux, NEP_CO2) %>%
+    mutate(NEP_CO2 = case_when(NEP_CO2 <0 ~ 0,TRUE ~ NEP_CO2)) %>%
+    summarize(CO2 = sum(CO2_flux), NEP = sum(NEP_CO2))
 
   filter(!is.na(datetime),
          site != "MC751") %>%
