@@ -1,4 +1,4 @@
-#Script to calculate slopes - then import layer to Arc and pull the slopes right 
+#Script to calculate slopes - then import layer to Arc and pull the slopes right
 # at/upstream of each sampling point (so slope for 180m upstream)
 
 
@@ -9,27 +9,28 @@ library(ggplot2)
 #install.packages("whitebox", repos="http://R-Forge.R-project.org")
 library(whitebox)
 
-setwd('C://Users/Alice Carter/git/ghg_patterns_nhc/src/Amanda_code/')
+setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/src/Amanda_code/')
 #nhc<-raster('durham.asc')
 #nhc_tif<-writeRaster(nhc, 'nhc_tif.tif', format='GTiff')
-nhc<-raster('fivecounties.tif')
+nhc<-raster('orange/orange.tif')
 
 #they were 30m resolution grid cells
 nhc
 plot(nhc)
-conversion<-function(x) {mean(x)/180}
+conversion <- function(x) {mean(x)/120}
 nhc_2<-aggregate(nhc, 6, FUN=conversion)
 writeRaster(nhc_2, './nhc_agg.tif', format = 'GTiff', overwrite = TRUE)
 #values don't seem to be changing
 
 
 nhc_manip<-nhc
-values(nhc_manip)<-values(nhc_manip/180)
+values(nhc_manip)<-values(nhc_manip/120)
 plot(nhc_manip)
 nhc_manip_agg<-aggregate(nhc_manip, 6, FUN=mean)
 
 
 writeRaster(nhc_manip_agg, './nhc_ma.tif', format='GTiff', overwrite=TRUE)
+writeRaster(nhc, './nhc_ma.tif', format='GTiff', overwrite=TRUE)
 nhc_ma<-raster('./nhc_ma.tif')
 nhc_ma
 
@@ -44,7 +45,7 @@ wbt_d8_flow_accumulation('./NHC_breachdepma.tif', './NHC_d8flowaccma.tif')
 d8<-raster('./NHC_d8flowaccma.tif')
 plot(d8)
 
-#wbt_flow_accumulation_full_workflow('./nhc_2.tif', './nhc_dem2.tif', './nhc_pntr2.tif', 
+#wbt_flow_accumulation_full_workflow('./nhc_2.tif', './nhc_dem2.tif', './nhc_pntr2.tif',
  #                                   './nhc_accum2.tif')
 
 
@@ -70,6 +71,13 @@ wbt_stream_slope_continuous('./NHC_d8flowpntrma.tif', './streamsma.tif',  './nhc
 ssc<-raster('./slope_contma.tif')
 plot(ssc)
 ssc
+
+sites <- read_csv('../data/site_data/NHCsite_metadata.csv')
+ss <- st_as_sf(sites, coords = c('longitude', 'latitude'),
+               crs = 4326)
+sites$slope_deg <- raster::extract(ssc, ss)
+write_csv(sites, '../data/site_data/NHCsite_metadata.csv')
+
 writeRaster(ssc, './nhc_ssc.tif', format='GTiff', overwrite=TRUE)
 
 
@@ -81,3 +89,4 @@ plot(ssc2d)
 writeRaster(ssc2d, './nhc_2d.tif', format='GTiff', overwrite=TRUE)
 
 ssc2d
+

@@ -3,41 +3,56 @@
 # using the whitebox tools package
 
 
+library(tidyverse)
 library(raster)
-library(sp)
-library(rgdal)
-library(ggplot2)
+library(sf)
 #install.packages("whitebox", repos="http://R-Forge.R-project.org")
 # whitebox::install_whitebox()
 library(whitebox)
-library(tidyverse)
+library(nhdplusTools)
 
 setwd('C:/Users/alice.carter/git/ghg_patterns_nhc/src/Amanda_code/')
 nhc <- raster('orange/orange.asc')
+writeRaster(nhc, 'orange/orange.tif', format = 'GTiff')
 sites <- read_csv('../data/site_data/NHCsite_metadata.csv')
+ss <- st_as_sf(sites, coords = c('longitude', 'latitude'),
+               crs = 4326)
 
-plot(nhc)
-nhc@crs
+#get NHD flowlines:
+outlet <- st_as_sf(sites[1,], coords = c('longitude', 'latitude'),
+                   crs = 4326)
 
+flowline <- map_nhdplus(outlets = outlet)$flowline
+st_write(flowline, dsn = 'orange/flowline', driver = 'ESRI Shapefile')
+writeRaster(flowline, 'streams.tif')
 # breach depressions in the DEM:
-whitebox::wbt_breach_depressions(dem = 'orange/orange.asc',
-                                 output = 'orange/orange_breached.asc',
-                                 fill_pits = TRUE)
+whitebox::wbt_breach_depressions(dem = 'orange/orange.tif',
+                                 output = 'orange/orange_breached.tif',
+                                 fill_pits = TRUE,)
 
-nhc <- raster('orange/orange_breached.asc')
-plot(nhc)
+nhc <- raster('orange/orange_breached.tif') %>%
+    raster::projectRaster(crs = 4326)
+crs(nhc)
+mapview::mapview(nhc) +
+    mapview::mapview(flowline)+
+    mapview::mapview(ss)
 
+whitebox::wbt_assess_route(routes = 'orange/flowline', dem = 'orange/orange_breached.tif',
+                           output = 'orange/orange_slope_path.tif')
 
 # calculate flowpath slope:
-whitebox::wbt_average_flowpath_slope(dem = 'orange/orange.asc',
-                                     output = 'orange/orange_slope.asc')
+whitebox::wbt_average_flowpath_slope(dem = 'orange/orange_breached.tif',
+                                     output = 'orange/orange_slope.tif')
 
-nhc <- raster('orange/orange_slope.asc')
-plot(nhc)
-points(sites$latitude, sites$longitude)
-nhc_2<-aggregate(nhc, 6, FUN=conversion)
-writeRaster(nhc_2, './nhc_agg.tif', format = 'GTiff', overwrite = TRUE)
-#values don't seem to be changing
+nhc_slope <- raster('orange/orange_slope.tif') %>%
+    raster::projectRaster(crs = 4326)
+
+mapview::mapview(nhc_slope)+
+    mapview::mapview(ss)
+
+# extract slopes from raster
+raster::extract(nhc_slope, ss)
+
 
 
 nhc_manip < -nhc
