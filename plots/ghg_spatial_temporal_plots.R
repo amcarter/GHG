@@ -1,6 +1,7 @@
 # Initial GHG analyses
 # NHC gas data from 11/2019 - 3/2020
 
+library(RColorBrewer)
 library(tidyverse)
 library(lubridate)
 library(ggfortify)
@@ -109,6 +110,10 @@ labframe <- data.frame(gas = c('CO2', 'CH4', 'N2O', 'O2'),
          l2 = c('', '', 'O', '')) %>%
     mutate(gas = factor(gas, levels = c('CO2', 'O2', 'CH4', 'N2O')))
 
+display.brewer.all()
+RColorBrewer::display.brewer.pal(8, 'Set2')
+pal <- brewer.pal(8, 'Set2')
+
 tiff("figures/final/ghgboxplots_longitudinal_boxplots.tiff", height = 4, width = 6.2,
     units = "in", res = 300)
 ff <- flux %>%
@@ -116,9 +121,12 @@ ff <- flux %>%
             ifelse(gas %in% c('CH4', 'N2O'), flux_mgm2d,
                    flux_mgm2d/1000)) %>%
     left_join(labframe, by = 'gas') %>%
-  ggplot(aes(x = site, y = flux_mgm2d, group = interaction(gas, site)))+
+  ggplot(aes(x = site, y = flux_mgm2d, fill = gas,
+             group = interaction(gas, site)))+
     geom_hline(yintercept = 0, lwd = .02)+
-    geom_boxplot(fill = 'gray70', position = 'identity') +
+    geom_boxplot( position = 'identity') +
+    scale_fill_manual(values = c(alpha(pal[2]), alpha(pal[3]),
+                                 alpha(pal[4]), alpha(pal[5])))+
     scale_x_discrete(limits = rev(levels(flux$site)),
                      labels = c(0, 2330, 2500, 5000, 6880, 8450))+
     labs(x = "Sites, distance downstream (m)",
@@ -131,14 +139,18 @@ ff <- flux %>%
     theme_bw() +
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
-           axis.title = element_text(size = 10))
+           axis.title = element_text(size = 10),
+           legend.position = 'none')
 cc <- flux %>%
    mutate(concentration_ugl =
             ifelse(gas %in% c('CH4', 'N2O'), concentration_ugl,
                    concentration_ugl/1000)) %>%
     left_join(labframe, by = 'gas') %>%
-  ggplot( aes(x = site, y = concentration_ugl, group = interaction(gas, site)))+
-    geom_boxplot(fill = 'gray70', position = 'identity') +
+  ggplot( aes(x = site, y = concentration_ugl, fill = gas,
+              group = interaction(gas, site)))+
+    geom_boxplot(position = 'identity') +
+    scale_fill_manual(values = c(alpha(pal[2]), alpha(pal[3]),
+                                 alpha(pal[4]), alpha(pal[5])))+
     scale_x_discrete(limits = rev(levels(flux$site)), labels = c(0, 2330, 2500, 5000, 6880, 8450))+
     labs(x = "Sites, distance downstream (m)",
          y = expression(paste(mu, 'g ', L^-1,
@@ -149,7 +161,8 @@ cc <- flux %>%
     theme_bw() +
     theme( plot.margin = unit(c(0,0,0,.6), "lines"),
            plot.title = element_text(size=10),
-           axis.title = element_text(size = 10))
+           axis.title = element_text(size = 10),
+           legend.position = 'none')
 ggarrange(cc, ff, ncol = 2, align = 'h', labels = c('a', 'b'),
           label.x = 0.03, label.y = 1.02)
 dev.off()
@@ -172,12 +185,16 @@ tiff('figures/final/CO2flux_equivalents.tif')
         summarize(CO2_flux_equivalents = median(flux.equivs)) %>%
         ggplot(aes(group, y = CO2_flux_equivalents, fill = gas)) +
         geom_bar(stat = 'identity') +
-        scale_fill_brewer(type = 'qual', palette = 7) +
+        scale_fill_brewer(type = 'qual', palette = 7)+
+        # scale_fill_manual(values = c(alpha(pal[2], 0.7), alpha(pal[4], 0.7),
+        #                              alpha(pal[5], 0.7))) +
         theme_minimal() +
         xlab('')+
         ylab(expression(paste(CO[2], ' flux equivalents')))+
         geom_hline(yintercept = 0, size = .7)
 dev.off()
+
+
 
 tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,
     units = "in", res = 300)
@@ -211,7 +228,6 @@ tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,
     ggarrange(no, nn, ncol = 1, heights = c(.5, 1), labels = c('a', 'b'),
               label.y = 1.05)
 dev.off()
-
 flux %>%
   mutate(flux_mgm2d =
            ifelse(gas %in% c('CH4', 'N2O'), flux_mgm2d,
@@ -259,29 +275,39 @@ dev.off()
   #   geom_boxplot() +
   #   facet_wrap(gas~., scales = "free_y", ncol = 1, strip.position = 'right') +
   #   theme_bw()
- pds <- dvs %>%
-   select(site, date, GPP, ER, discharge, watertemp_C) %>%
-   filter(site != 'MC751') %>%
-   group_by(date) %>%
-   summarize(discharge = discharge[which(site == 'NHC')],
-             watertemp_C = mean(watertemp_C, na.rm = T),
-             across(any_of(c('GPP', 'ER')),
-                    .fns = list(mean = ~mean(., na.rm = T),
-                                c2.5 = ~quantile(., 0.025, na.rm = T),
-                                c97.5 = ~quantile(., .975, na.rm = T)),
-                    .names = '{col}_{fn}'))
+pds <- dvs %>%
+    select(site, date, GPP, ER, discharge, watertemp_C) %>%
+    filter(site != 'MC751') %>%
+    group_by(date) %>%
+    summarize(discharge = discharge[which(site == 'NHC')],
+              watertemp_C = mean(watertemp_C, na.rm = T),
+              across(any_of(c('GPP', 'ER')),
+                     .fns = list(mean = ~mean(., na.rm = T),
+                                 c2.5 = ~quantile(., 0.025, na.rm = T),
+                                 c97.5 = ~quantile(., .975, na.rm = T)),
+                     .names = '{col}_{fn}'))
 
- pg <- gas_do %>%
-   select(site, date, gas, concentration_ugl) %>%
-   pivot_wider(values_from = 'concentration_ugl', names_from = 'gas') %>%
-   mutate(DO = DO/1000,
-          CO2 = CO2/1000) %>%
-   group_by(date)%>%
-   mutate(across(-site,
-                 .fns = list(ci25 = ~quantile(., .25, na.rm = T),
-                             ci75 = ~quantile(., .75, na.rm = T)),
-                 .names = '{col}_{fn}'))
- ll <- left_join(pds, pg) %>%
+pg <- gas_do %>%
+    select(site, date, gas, concentration_ugl) %>%
+    pivot_wider(values_from = 'concentration_ugl', names_from = 'gas') %>%
+    mutate(DO = DO/1000,
+           CO2 = CO2/1000,
+           ch4co2 = CH4/CO2,
+           o2co2 = DO/CO2) %>%
+    left_join(select(dvs, site, date, doc_mgl, no3n_mgl)) %>%
+    mutate(group = case_when(date == as.Date('2019-12-04') ~ as.Date('2019-12-03'),
+                             date == as.Date('2020-01-30') ~ as.Date('2020-01-29'),
+                             TRUE ~ date)) %>%
+    group_by(group)%>%
+    mutate(across(-c(site, date),
+                  .fns = list(ci25 = ~quantile(., .25, na.rm = T),
+                              ci75 = ~quantile(., .75, na.rm = T),
+                              med = ~median(., na.rm = T)),
+                  .names = '{col}_{fn}')) %>%
+    arrange(date)
+
+
+ll <- left_join(pds, pg) %>%
    mutate(doy = as.numeric(format(date, '%j'))) %>%
    summarize(across(-date, ~na.approx(., doy)))
  loess_mod <- loess(CO2 ~ doy, data = ll, span = 0.02)
@@ -356,7 +382,6 @@ png('figures/figure3_timeseries_gas_conc_drivers_small.png', width = 3.5,
     axis(2, at = c(0.1, 1, 10, 100), labels = c(0.1, 1, 10, 100), cex.axis = 0.8)
 dev.off()
 
-pg <- arrange(pg, date)
  # Version two of this figure, where the upstream and downstream temperature
  # and discharge are plotted separately
  # update this after the above one is super finzlized
@@ -433,6 +458,120 @@ tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v2.tif', width = 3
     axis(1, at = seq(as.Date('2019-12-01'), by = 'month', length.out = 4),
          labels = c('Dec-2019', 'Jan-2020', 'Feb-2020', 'Mar-2020'), cex.axis = 0.8)
     axis(2, at = c(0.1, 1, 100), labels = c(0.1, 1, 100), cex.axis = 0.8)
+dev.off()
+
+ # Version three of this figure, with some panels combined per reviewer request
+ratios <- read_csv('data/fraction_of_instream_production_CO2_and_CH4CO2ratios.csv') %>%
+    mutate(DO_extra = DO.obs - DO.sat,
+           O2CO2_extra = DO_extra/CO2.umol_extra)%>%
+    filter(CO2.umol_extra != 0) %>%
+    group_by(group)%>%
+    summarize(ch4co2 = mean(CH4CO2_extra, na.rm = T),
+              o2co2 = mean(O2CO2_extra, na.rm = T))
+
+
+
+tiff('figures/final/figure3_timeseries_gas_conc_drivers_small_v3.tif', width = 3.5,
+    height = 5.2, res = 300, units = 'in', family = 'cairo')
+    m <- matrix(c(1,1,2,2,3,3,4,4,5,5), ncol = 1)
+    layout(m)
+    par(mar = c(.3,0,0,0), oma = c(5, 4, 1, 3))
+    plot(pds$date, pds$GPP_mean, type = 'l', lwd = 2, col = 'grey35',
+         ylim = c(-8.5,3.5), cex.axis = 0.8, xaxt = 'n', xlab = '', padj = 0.8)
+    lines(pds$date, -pds$ER_mean, lwd = 2, col = 'grey35')
+    polygon(c(pds$date, rev(pds$date)),
+            na.approx(rollmean(c(pds$GPP_c2.5, rev(pds$GPP_c97.5)), 3, na.pad = T),
+                      na.rm = F),
+            border = NA, col = alpha(pal[1], .7))
+    polygon(c(pds$date, rev(pds$date)),
+            na.approx(rollmean(c(-pds$ER_c2.5, rev(-pds$ER_c97.5)), 3, na.pad = T),
+                      na.rm = F),
+            border = NA, col = alpha(pal[7], .7))
+    abline(h = 0)
+    mtext('Metabolism', 2,2.7,cex = 0.63)
+    mtext(expression(paste("(g"~O[2]~m^-2~y^-1,")")), 2, 1.5, cex = .63)
+    legend('bottomright', legend = c('GPP', 'ER'),cex = .8,
+           col = 'grey35', inset = .065, lty = 1, bty = 'n',  lwd = 2)
+    polygon(pds$date[c(101,112,112,101)], c(-4.5,-4.5,-5.5,-5.5),
+            col = alpha(pal[1], .7), border = NA)
+    polygon(pds$date[c(101,112,112,101)], c(-7,-7,-6,-6),
+            col = alpha(pal[7], .7), border = NA)
+
+    plot(dvs[dvs$site == "UNHC",]$date, dvs[dvs$site == 'UNHC',]$watertemp_C,
+         type = 'l', lwd = 1.5, col = 'grey40', ylim = c(-18,24),
+         xaxt = 'n', xlab = '', ylab = '', cex.axis = 0.8, yaxt = 'n')
+    lines(dvs[dvs$site == "NHC",]$date, dvs[dvs$site == 'NHC',]$watertemp_C,
+         lwd = 1.5, col = 'grey40', lty = 2)
+    mtext(expression(paste('Temp ('~degree, 'C)')), 4, 1.6, cex = .63, adj = 1)
+    axis(4, at = c(5, 10, 15, 20), cex.axis = 0.8, padj = -1)
+    legend('topleft', c('upstream', 'downstream'), lty = c(1,2),
+           col = 'grey40', bty = 'n', cex = .7)
+    par(new = T)
+    plot(dvs[dvs$site == "UNHC",]$date, dvs[dvs$site == 'UNHC',]$discharge,
+         type = 'l', lwd = 1.5, col = 'grey40', log = 'y', xaxt = 'n',
+         yaxt = 'n', xlab = '', ylab = '', cex.axis = 0.8, ylim = c(.2, 150))
+    lines(dvs[dvs$site == "NHC",]$date, dvs[dvs$site == 'NHC', ]$discharge,
+         lwd = 1.5, col = 'grey40', lty = 2)
+    mtext("Discharge", 2, 2.7, cex = .63, adj = 0.01)
+    mtext(expression(paste("(m"^"3"~s^-1,")")), 2, 1.5, cex = .63, adj = 0.1)
+    axis(2, at = c(0.2, 1,5), labels = c(0.2, 1, 5), cex.axis = 0.8, padj = 0.8)
+    plot(pg$date, pg$CO2, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+         ylim = c(-0.2,8.9), cex.axis = 0.8, col = pal[2], padj = 0.8)
+    polygon(c(pg$date, rev(pg$date)), c(pg$CO2_ci25, rev(pg$CO2_ci75)),
+            col = alpha(pal[2], .5), border = NA)
+    mtext(expression(paste(CO[2], ' (mg'~L^-1,')')), 2, 1.5, cex = .63)
+    par(new = T)
+    plot(pg$date, pg$DO, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+         ylim = c(6,12.5), yaxt = 'n', cex.axis = 0.8, col = pal[3])
+    polygon(c(pg$date, rev(pg$date)), c(pg$DO_ci25, rev(pg$DO_ci75)),
+            col = alpha(pal[3], .5), border = NA)
+    axis(4, at = c(7,9,11), cex.axis = 0.8, padj = -1)
+    mtext(expression(paste(O[2], ' (mg'~L^-1,')')), 4, 1.6, cex = .63)
+    par(new = T)
+    plot(ratios$group, ratios$o2co2, type = 'l', lty = 2, col = pal[3], lwd = 1.5,
+         xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
+    plot(pg$date, pg$CH4, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+         ylim = c(-1, 22), yaxt = 'n', cex.axis = 0.8, col = pal[4])
+    polygon(c(pg$date, rev(pg$date)), c(pg$CH4_ci25, rev(pg$CH4_ci75)),
+            col = alpha(pal[4], .5), border = NA)
+    axis(2, at = c(0,10,20), cex.axis = 0.8, padj = 0.8)
+    mtext(expression(paste(CH[4], ' ('*mu*'g'~L^-1,')')), 2,1.5, cex = .63)
+    par(new = T)
+    plot(ratios$group, ratios$ch4co2, type = 'l', lty = 2, col = pal[4], lwd = 1.5,
+         xaxt = 'n', yaxt = 'n', xlab = '', ylab = '')
+    par(new = T)
+    plot(pg$date, pg$N2O, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+         ylim = c(-.1, .93), yaxt = 'n', cex.axis = 0.8, col = pal[5])
+    polygon(c(pg$date, rev(pg$date)), c(pg$N2O_ci25, rev(pg$N2O_ci75)),
+            col = alpha(pal[5], .5), border = NA)
+    axis(4, at = c(0, 0.4, 0.8), cex.axis = 0.8, padj = -1)
+    mtext(expression(paste(N[2]*'O', ' ('*mu*'g'~L^-1,')')), 4,1.6, cex = .63)
+
+    plot(pg$date, pg$doc_mgl, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+          yaxt = 'n', cex.axis = 0.8, col = pal[1])
+    polygon(c(pg$date, rev(pg$date)), c(pg$doc_mgl_ci25, rev(pg$doc_mgl_ci75)),
+            col = alpha(pal[1], .5), border = NA)
+    axis(2, at = c(2,4,6, 8), cex.axis = 0.8, padj = 0.8)
+    mtext(expression(paste('DOC (mg ', L^-1, ')')), 2,1.5, cex = .63)
+    par(new = T)
+    plot(pg$date, pg$no3n_mgl, pch = 20, xaxt = 'n', xlab = '', ylab = '',
+         yaxt = 'n', cex.axis = 0.8, col = pal[8])
+    polygon(c(pg$date, rev(pg$date)), c(pg$no3n_mgl_ci25, rev(pg$no3n_mgl_ci75)),
+            col = alpha(pal[8], .5), border = NA)
+    axis(4, at = c(0, 0.4, 0.8), cex.axis = 0.8, padj = -1)
+    mtext(expression(paste(NO[3],'-N (mg ', L^-1,')')), 4,1.6, cex = .63)
+    axis(1, at = seq(as.Date('2019-12-01'), by = 'month', length.out = 4),
+         labels = c('Dec-2019', 'Jan-2020', 'Feb-2020', 'Mar-2020'),
+         cex.axis = 0.9,  padj = -0.6)
+    legend('bottomleft', inset = c(0, -0.8), xpd = NA, ncol = 4, bty = 'n',
+           legend = c(expression(CO[2]), expression(O[2]),
+                      expression(CH[4]), expression(N[2]*O),
+                      'DOC', expression(NO[3]*-N),
+                      expression(paste('excess ', O[2], ':', CO[2])),
+                      expression(paste('excess ', CH[4], ':', CO[2]))),
+           col = pal[c(2,3,4,5,1,8,3,4)], pch = c(rep(19,6), NA, NA),
+           lty = c(rep(NA, 6), 2,2), lwd = 1.5, x.intersp = .1,cex = 1,
+           text.width = c(rep(13,4), rep(14,2), 18, 18))
 dev.off()
 
 

@@ -8,7 +8,7 @@ dat <- readRDS('data/site_data/met_preds_stream_metabolizer_O2.rds')
 
 k <- dat$preds %>%
     filter(era == 'now') %>%
-    dplyr::select(date, site, year, month, doy, K600, discharge)
+    dplyr::select(date, site, year, month, doy, K600, ER, discharge)
 sites <- read_csv('data/site_data/NHCsite_metadata.csv') %>%
     slice(c(1:5,7)) %>%
     mutate(dist_downstream = 8450 - distance_m,
@@ -24,13 +24,23 @@ k <- mutate(k,
                                month %in% c(6,7,8) ~ 'summer',
                                TRUE ~ NA_character_))
 # plot KQ relationships for each site
-png('figures/final/KxQ_curves.png', width = 6, height = 3,
+png('figures/final/KxQ_curves.png', width = 6, height = 6,
     units = 'in', res = 300)
-    ggplot(k, aes(log(discharge), K600, col = factor(year))) +
+kq <- ggplot(k, aes(discharge, K600))+#, col = factor(year))) +
         geom_point(size = .5)+
         geom_smooth( size = .7,  method = loess, se = FALSE) +
         facet_wrap(.~dist_downstream) +
+        scale_x_log10()+
         theme_bw()
+ker <- ggplot(k, aes(K600, ER))+#, col = factor(year))) +
+        geom_point(size = .5)+
+        facet_wrap(.~dist_downstream) +
+        theme_bw()+
+        xlim(0,25)+
+        ylim(-20,0)
+
+ggpubr::ggarrange(kq, ker, ncol = 1, labels = c('a', 'b'))
+
 dev.off()
 
 ggplot(k, aes(log(discharge), K600, col = factor(year))) +
@@ -38,7 +48,7 @@ ggplot(k, aes(log(discharge), K600, col = factor(year))) +
     geom_smooth( size = .7,  method = loess, se = FALSE) +
     facet_wrap(.~dist_downstream, scales = 'free') +
     theme_bw()
-ggplot(k, aes(log(discharge), K600, col = doy)) +
+ggplot(k, aes(log(discharge), K600))+#, col = doy)) +
     geom_point()+
     geom_smooth( size = .7,  method = loess, se = FALSE) +
     facet_wrap(.~dist_downstream, scales = 'free') +
@@ -48,5 +58,6 @@ for(i in 1:6){
     s = sites$site[i]
     dd <- filter(k, site == s)
     l <- loess(K600 ~ log(discharge), data = dd)
-    predict(l, 8.5', 'NHC_' 'NHC_0'))
+    predict(l, 'NHC_8.5', 'NHC_0')
 }
+

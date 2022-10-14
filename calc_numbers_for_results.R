@@ -59,8 +59,8 @@ dat %>% dplyr::select(c(group, CO2.ugL)) %>%
 
 
 dat %>% dplyr::select(c(group, CH4.ugL)) %>%
-  filter(group %in% as.Date(c('2019-11-11','2019-12-03',
-                              '2019-12-12','2020-03-20'))) %>%
+  # filter(group %in% as.Date(c('2019-11-11','2019-12-03',
+  #                             '2019-12-12','2020-03-20'))) %>%
   group_by(group) %>%
   summarize_all(.funs = list(mean = ~mean(., na.rm = T),
                             sd = ~sd(., na.rm = T),

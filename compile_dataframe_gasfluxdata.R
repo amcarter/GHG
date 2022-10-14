@@ -214,8 +214,17 @@ SP_wchem <- read_csv('data/water_chemistry/StreampulseWQDec2020.csv') %>%
            no3n_mgl = case_when(no3n_mgl == "<0.001" ~ "0.0005",
                                 TRUE ~ no3n_mgl),
            no3n_mgl = as.numeric(no3n_mgl)) %>%
-    bind_rows(nuts) %>%
-    mutate(br_mgl = case_when(br_mgl == "<0.03" ~ "0.015",
+    bind_rows(nuts)
+
+# how many samples are below detection?
+bdl <- SP_wchem %>% filter(site != 'MC751',
+                    date %in% unique(as.Date(ghg$datetime))) %>%
+    select(no3n_mgl, tdn_mgl, doc_mgl)
+length(which(bdl$no3n_mgl < 0.005))
+
+SP_wchem <- SP_wchem %>%
+    mutate(no3n_mgl = ifelse(no3n_mgl < 0.005 , 0.0025, no3n_mgl),
+           br_mgl = case_when(br_mgl == "<0.03" ~ "0.015",
                               br_mgl == "<0.01" ~ "0.005",
                               TRUE ~ br_mgl),
            nh4n_mgl = ifelse(nh4n_mgl == "<0.01", "0.005", nh4n_mgl),
