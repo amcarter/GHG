@@ -17,6 +17,11 @@ Q <- read_csv('data/ghg_filled_drivers_dataframe.csv') %>%
     # filter(site %in%c("NHC", 'UNHC')) %>%
     mutate(discharge_m3d = discharge * 24*60*60) %>%
     select(date, discharge_m3d)
+Q2 <- read_csv('data/ghg_filled_drivers_dataframe.csv') %>%
+    filter(site %in%c("NHC", 'UNHC')) %>%
+    mutate(discharge_m3d = discharge * 24*60*60) %>%
+    select(date, site, discharge_m3d) %>%
+    pivot_wider(id_cols = date, names_from = site, values_from = discharge_m3d)
 ggplot(dat, aes(ws_area_km2, distance_m)) +
   geom_point()
 # Mass Balance Calculations ####
@@ -170,16 +175,51 @@ subcatchement_area <- dat$ws_area_km2[dat$site == 'NHC'][1] -
     dat$ws_area_km2[dat$site == 'UNHC'][1]
 
 ff$gw_flux_m3m2d =  ff$delta_Q_m3d/ff$sa_m2
+
+f <- select(ff, date, gw_flux_m3m2d) %>%
+    group_by(date) %>%
+    summarize(gw_flux_m3m2d = mean(gw_flux_m3m2d))
+
+write_csv(f,'data/gw_fluxes.csv')
+Q2 <- Q2 %>% left_join(select(ff, date, sa_m2)) %>%
+    mutate(sa_m2 = zoo::na.approx(sa_m2, x = date),
+           gw_flux = (NHC - UNHC)/sa_m2)
+
+Q2 %>% group_by(date) %>%
+    summarize(gw_flux = mean(gw_flux, na.rm = T)) %>%
+    filter(date %in% unique(ff$date))
 tiff('figures/final/gw_flux_distribution.tiff',
-     height = 3, width = 5, units = 'in', res = 300)
-    par(mar = c(4,4,2,2))
+     height = 4, width = 5, units = 'in', res = 300)
+    par(mar = c(3,4.5,1,2),
+        mfrow = c(2,1))
     plot(density(ff$gw_flux_m3m2d, na.rm = T),
-         xlab = expression(paste('Groundwater Flux  (', m^3, m^-2, d^-1, ')')),
-         main = '')
+         xlab = '', ylab = '', cex.axis = 0.8, main = '')
+    mtext(expression(paste('Groundwater Flux  (', m^3, m^-2, d^-1, ')')),1,2.1,
+          cex = 0.85)
+    mtext('Density', 2, 2.1, cex = 0.85)
     points(ff$gw_flux_m3m2d, rep(0.03, nrow(ff)), pch = 17, col = 'brown3')
     legend('topleft', legend = 'sample days', pch = 17, col = 'brown3', bty = 'n')
+
+    # plot(Q2$date, Q2$gw_flux, type = 'l',
+    plot(ff$date, ff$gw_flux_m3m2d, type = 'b', pch = 20,
+         xaxt = 'n', xlab = 'Date',
+         ylab = '', cex.axis = 0.8)
+    abline(h = 0, col = 'grey70')
+    points(ff$date, ff$gw_flux_m3m2d, pch = 17, col = 'brown3')
+    mtext(expression(paste('Groundwater Flux  (', m^3, m^-2, d^-1, ')')),2,2.1,
+          cex = 0.85)
+    axis(1, at = seq(as.Date('2019-12-01'), as.Date('2020-03-01'), by = 'month'),
+         labels = month.abb[c(12,1:3)], cex.axis = 0.8)
 dev.off()
 
+
+
+# gw correction?
+d2 %>% select(site, date, group, DO.obs, ER) %>%
+    left_join(select(ff, date, gw_flux_m3m2d)) %>%
+    group_by(group) %>%
+    summarize(across(c(DO.obs, gw_flux_m3m2d, ER), mean, na.rm = T)) %>%
+    mutate(G = (DO.obs - 4) * gw_flux_m3m2d)
 flux %>% filter(gas == 'CO2')%>%
 ggplot(aes(-F_atm_gd, F_met_gd, col = delta_Q_md))+
     geom_point(size = 3)+

@@ -174,26 +174,42 @@ flux %>%
   geom_boxplot(fill = 'gray70', position = 'identity') +
   theme_bw()
 
-tiff('figures/final/CO2flux_equivalents.tif')
+tiff('figures/final/CO2flux_equivalents.tif', width = 5, height = 5,
+     units = 'in', res = 300)
     flux %>%
-        mutate(flux.equivs = case_when(gas == 'CO2' ~ flux_mgm2d,
-                                       gas == 'N2O' ~ flux_mgm2d *298,
-                                       gas == 'CH4' ~ flux_mgm2d * 25,
+        mutate(flux.equivs = case_when(gas == 'CO2' ~ flux_mgm2d/1000,
+                                       gas == 'N2O' ~ flux_mgm2d *298/1000,
+                                       gas == 'CH4' ~ flux_mgm2d * 25/1000,
                                        TRUE ~ flux_mgm2d)) %>%
         filter(gas != 'O2') %>%
         group_by(group, gas) %>%
         summarize(CO2_flux_equivalents = median(flux.equivs)) %>%
         ggplot(aes(group, y = CO2_flux_equivalents, fill = gas)) +
         geom_bar(stat = 'identity') +
+        # geom_text(aes(label = round(CO2_flux_equivalents, 1)), vjust=0) +
         scale_fill_brewer(type = 'qual', palette = 7)+
         # scale_fill_manual(values = c(alpha(pal[2], 0.7), alpha(pal[4], 0.7),
         #                              alpha(pal[5], 0.7))) +
         theme_minimal() +
         xlab('')+
-        ylab(expression(paste(CO[2], ' flux equivalents')))+
+        ylab(expression(paste(CO[2], ' flux equivalents (g  ', m^-2, d^-1, ')')))+
         geom_hline(yintercept = 0, size = .7)
 dev.off()
 
+    flux %>%
+        mutate(flux.equivs = case_when(gas == 'CO2' ~ flux_mgm2d/1000,
+                                       gas == 'N2O' ~ flux_mgm2d *298/1000,
+                                       gas == 'CH4' ~ flux_mgm2d * 25/1000,
+                                       TRUE ~ flux_mgm2d)) %>%
+        filter(gas != 'O2') %>%
+        group_by(group, gas) %>%
+        summarize(CO2_flux_equivalents = median(flux.equivs)) %>%
+        mutate(sign = case_when(CO2_flux_equivalents <0 ~ 'neg',
+                                TRUE ~ 'pos')) %>%
+        group_by(group, sign) %>%
+        summarize(tot = round(sum(CO2_flux_equivalents), 2))
+
+    0.35/4.33
 
 
 tiff("figures/final/ghgconc_longitudinal_boxplots.tif", height = 5, width = 3.2,

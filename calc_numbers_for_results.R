@@ -15,7 +15,7 @@ dat$site <- factor(dat$site, levels = c("NHC", "PM", "CBP", "WB", "WBP","UNHC"))
 dat <- dat %>% mutate(across(ends_with('flux_ugld'), ~.*depth)) %>%
   rename_with(ends_with("flux_ugld"),.fn = ~gsub("_ugld", "_mgm2d", .) )
 
-dat %>% dplyr::select(ends_with(c('.obs','ugL', 'mgm2d'))) %>%
+dat %>% dplyr::select(ends_with(c('.obs','ugL', 'mgm2d', 'K600'))) %>%
   summarize(across(everything(), .fns = list(mean = ~mean(.x, na.rm = T),
                                              sd = ~sd(.x, na.rm = T),
                                              min = ~min(.x, na.rm = T),

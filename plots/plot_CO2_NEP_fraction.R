@@ -14,10 +14,20 @@ dvs <- read_csv("data/ghg_filled_drivers_dataframe.csv") %>%
            # date >= min(unique(dat$group)),
            # date <= max(unique(dat$group)))
 
+gw <- read_csv('data/gw_fluxes.csv')
+
 dat%>%
-    select(site, group, CO2_flux, NEP_CO2, instr) %>%
+    select(site, date, group, CO2_flux, NEP_CO2, instr, ER, GPP) %>%
+    left_join(gw) %>% select(-date) %>%
     # filter(CO2_flux >0) %>%
-    mutate(pctNEP = NEP_CO2/CO2_flux,
+    mutate(gw_corr = case_when(gw_flux_m3m2d > 0 ~ gw_flux_m3m2d * 8,
+                               TRUE ~ 0),
+           ER_corr = ER - gw_corr,
+           ER_corr = ifelse(ER_corr < 0, 0, ER_corr),
+           NEP_corr = ER_corr - GPP,
+           NEP_CO2_corr = ER_corr * 44/32,
+           pctNEP = NEP_CO2/CO2_flux,
+           pctNEP_corr = NEP_CO2_corr/CO2_flux,
            pctNEP_filt = case_when(pctNEP < 0 ~ 0,
                                    pctNEP >1 ~1,
                                    TRUE ~pctNEP)) %>% #filter(pctNEP_filt == 0)
